@@ -18,3 +18,14 @@ export function formatUsd(nanos: number): string {
 export function formatUsdString(amount: string): string {
     return formatUsd(decimalToNanos(amount));
 }
+
+/** Signed display: "+$1.0000", "−$0.0180" (true minus sign), "$0.0000" for zero. */
+export function formatSignedUsd(amount: string): string {
+    const nanos = decimalToNanos(amount);
+
+    if (nanos === 0) {
+        return formatUsd(0);
+    }
+
+    return `${nanos > 0 ? '+' : '−'}${formatUsd(Math.abs(nanos))}`;
+}
