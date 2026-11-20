@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\SpendReportController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\GenerationController;
@@ -16,6 +17,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('generations', [GenerationController::class, 'store'])->name('generations.store');
     Route::get('generations/{generation}/image', GenerationImageController::class)->name('generations.image');
     Route::resource('credits', CreditController::class)->only(['index', 'store']);
+    Route::get('admin/spend-report', SpendReportController::class)->name('admin.spend-report');
 
     Route::get('generations', RedirectController::class)->defaults('destination', '/dashboard')->defaults('status', 301);
     Route::get('generations/create', RedirectController::class)->defaults('destination', '/generate')->defaults('status', 301);

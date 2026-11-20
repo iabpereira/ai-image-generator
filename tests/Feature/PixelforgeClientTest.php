@@ -2,6 +2,7 @@
 
 use App\Services\Pixelforge\PixelforgeClient;
 use App\Services\Pixelforge\PixelforgeException;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -82,4 +83,25 @@ it('returns null pricing when pixelforge is unreachable and nothing is cached', 
     Http::fake(['*/pricing' => Http::response(['error' => ['code' => 'overloaded', 'message' => 'busy']], 503)]);
 
     expect(app(PixelforgeClient::class)->pricingOrNull())->toBeNull();
+});
+
+it('returns the provider cost per day from the usage endpoint', function () {
+    Http::fake(['pixelforge.promptedit.dev/v1/usage*' => Http::response([
+        'object' => 'usage',
+        'data' => [
+            ['date' => '2026-11-01', 'generations' => 3, 'cost_usd' => '0.169080000'],
+            ['date' => '2026-11-02', 'generations' => 0, 'cost_usd' => '0.000000000'],
+        ],
+    ])]);
+
+    $usage = app(PixelforgeClient::class)->usage(
+        CarbonImmutable::parse('2026-11-01'),
+        CarbonImmutable::parse('2026-11-02'),
+    );
+
+    expect($usage['2026-11-01']->nanos)->toBe(169_080_000)
+        ->and($usage['2026-11-02']->nanos)->toBe(0);
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), 'start_date=2026-11-01')
+        && str_contains($request->url(), 'end_date=2026-11-02')
+        && $request->hasHeader('Authorization', 'Bearer pk_test'));
 });
