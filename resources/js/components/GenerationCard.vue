@@ -58,7 +58,10 @@ const createdAt = computed(() =>
         <div class="flex flex-1 flex-col gap-3 p-4">
             <GenerationStatusBadge :status="generation.status" />
 
-            <p class="line-clamp-2 text-sm" :title="generation.prompt">
+            <p
+                class="line-clamp-2 text-sm [overflow-wrap:anywhere]"
+                :title="generation.prompt"
+            >
                 {{ generation.prompt }}
             </p>
 

@@ -144,7 +144,10 @@ function referenceImagesLabel(count: number): string {
                             </div>
                         </td>
                         <td class="max-w-sm px-4 py-3">
-                            <p class="line-clamp-2" :title="generation.prompt">
+                            <p
+                                class="line-clamp-2 [overflow-wrap:anywhere]"
+                                :title="generation.prompt"
+                            >
                                 {{ generation.prompt }}
                             </p>
                             <p
