@@ -21,5 +21,5 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/generations/create');
+    $response->assertRedirect(route('dashboard', absolute: false));
 });
