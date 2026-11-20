@@ -24,7 +24,8 @@ it('defaults to the last 7 utc days', function () {
         ->assertInertia(fn (Assert $page) => $page->component('admin/SpendReport')
             ->where('filters.start_date', '2026-11-14')
             ->where('filters.end_date', '2026-11-20')
-            ->has('report.days', 7));
+            ->has('report.days', 7)
+            ->where('currentMarkupBasisPoints', 2500));
 });
 
 it('rejects ranges longer than pixelforge allows', function () {

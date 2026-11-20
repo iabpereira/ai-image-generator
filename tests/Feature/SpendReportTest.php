@@ -3,6 +3,7 @@
 use App\Models\Generation;
 use App\Models\User;
 use App\Services\Reports\SpendReport;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 
@@ -34,7 +35,9 @@ it('aggregates succeeded generations per utc completion day and user, and reconc
         ->and($report['days'][1]['matches'])->toBeFalse()
         ->and($report['totals'])->toBe([
             'generations' => 3, 'charged' => '1.145662500', 'provider_cost' => '0.916530000', 'profit' => '0.229132500',
+            'effective_markup_basis_points' => 2500,
         ])
+        ->and($report['days'][0]['effective_markup_basis_points'])->toBe(2500)
         ->and($report['usage_error'])->toBeNull();
 });
 
@@ -48,4 +51,22 @@ it('still reports our numbers when the usage api is unavailable', function () {
         ->and($report['days'][0]['pixelforge_cost'])->toBeNull()
         ->and($report['days'][0]['matches'])->toBeNull()
         ->and($report['usage_error'])->toContain('overloaded');
+});
+
+it('reports the effective markup as the cost-weighted mix of quoted markups', function () {
+    Http::fake(['*/usage*' => Http::response(['data' => []])]);
+    $user = User::factory()->create();
+    Generation::factory()->for($user)->succeeded()->create([
+        'completed_at' => '2026-11-01 10:00:00', 'markup_basis_points' => 2500,
+        'provider_cost' => Money::fromNanos(1_000_000_000), 'charged_amount' => Money::fromNanos(1_250_000_000),
+    ]);
+    Generation::factory()->for($user)->succeeded()->create([
+        'completed_at' => '2026-11-01 11:00:00', 'markup_basis_points' => 3000,
+        'provider_cost' => Money::fromNanos(3_000_000_000), 'charged_amount' => Money::fromNanos(3_900_000_000),
+    ]);
+
+    $report = app(SpendReport::class)->build(CarbonImmutable::parse('2026-11-01'), CarbonImmutable::parse('2026-11-02'));
+
+    expect($report['totals']['effective_markup_basis_points'])->toBe(2875)
+        ->and($report['days'][1]['effective_markup_basis_points'])->toBeNull();
 });

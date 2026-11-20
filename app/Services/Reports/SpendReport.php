@@ -22,9 +22,9 @@ final readonly class SpendReport
 
     /**
      * @return array{
-     *     rows: list<array{date: string, user_id: int, user_name: string, user_email: string, generations: int, charged: string, provider_cost: string, profit: string}>,
-     *     days: list<array{date: string, generations: int, charged: string, provider_cost: string, profit: string, pixelforge_cost: string|null, matches: bool|null}>,
-     *     totals: array{generations: int, charged: string, provider_cost: string, profit: string},
+     *     rows: list<array{date: string, user_id: int, user_name: string, user_email: string, generations: int, charged: string, provider_cost: string, profit: string, effective_markup_basis_points: int|null}>,
+     *     days: list<array{date: string, generations: int, charged: string, provider_cost: string, profit: string, effective_markup_basis_points: int|null, pixelforge_cost: string|null, matches: bool|null}>,
+     *     totals: array{generations: int, charged: string, provider_cost: string, profit: string, effective_markup_basis_points: int|null},
      *     usage_error: string|null
      * }
      */
@@ -84,7 +84,7 @@ final readonly class SpendReport
     }
 
     /**
-     * @return array{generations: int, charged: string, provider_cost: string, profit: string}
+     * @return array{generations: int, charged: string, provider_cost: string, profit: string, effective_markup_basis_points: int|null}
      */
     private function amounts(int $generations, int $chargedNanos, int $providerNanos): array
     {
@@ -93,7 +93,23 @@ final readonly class SpendReport
             'charged' => Money::fromNanos($chargedNanos)->toDecimalString(),
             'provider_cost' => Money::fromNanos($providerNanos)->toDecimalString(),
             'profit' => Money::fromNanos($chargedNanos - $providerNanos)->toDecimalString(),
+            'effective_markup_basis_points' => $this->effectiveMarkup($chargedNanos - $providerNanos, $providerNanos),
         ];
+    }
+
+    /**
+     * Profit over provider cost, in basis points rounded to the nearest one. It's the
+     * cost-weighted average of the markups generations were quoted with (plus a hair
+     * from rounding each charge up), so it can differ from the markup in force.
+     * Null when there is no provider cost to compare with.
+     */
+    private function effectiveMarkup(int $profitNanos, int $providerNanos): ?int
+    {
+        if ($providerNanos === 0) {
+            return null;
+        }
+
+        return intdiv($profitNanos * 20_000 + $providerNanos, 2 * $providerNanos);
     }
 
     /**
