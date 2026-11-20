@@ -8,12 +8,6 @@ import type { Generation } from '@/types/generation';
 
 const props = defineProps<{ generation: Generation }>();
 
-const aspectRatio = computed(() => {
-    const [width, height] = props.generation.size.split('x');
-
-    return `${width} / ${height}`;
-});
-
 const createdAt = computed(() =>
     new Date(props.generation.created_at).toLocaleString(undefined, {
         dateStyle: 'medium',
@@ -26,17 +20,22 @@ const createdAt = computed(() =>
     <article
         class="flex flex-col overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
     >
-        <div
-            class="relative w-full overflow-hidden bg-muted"
-            :style="{ aspectRatio }"
-        >
-            <img
+        <div class="relative aspect-square w-full overflow-hidden bg-muted">
+            <a
                 v-if="generation.image_src"
-                :src="generation.image_src"
-                :alt="generation.prompt"
-                loading="lazy"
-                class="size-full object-cover"
-            />
+                :href="generation.image_src"
+                target="_blank"
+                rel="noopener"
+                class="block size-full"
+                :title="`Open full image (${generation.size})`"
+            >
+                <img
+                    :src="generation.image_src"
+                    :alt="generation.prompt"
+                    loading="lazy"
+                    class="size-full object-cover transition-transform hover:scale-105"
+                />
+            </a>
             <div
                 v-else-if="generation.status === 'failed'"
                 class="flex size-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"
