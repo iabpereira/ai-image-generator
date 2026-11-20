@@ -3,7 +3,7 @@ set -e
 
 # Only the web server container prepares the app; one-off commands
 # (e.g. `docker compose run --rm web php artisan ...`) skip this.
-if [ "$1" = "frankenphp" ]; then
+if [ "$1" = "start-app" ]; then
     mkdir -p storage/app/public
 
     if [ "${DB_CONNECTION:-sqlite}" = "sqlite" ]; then
