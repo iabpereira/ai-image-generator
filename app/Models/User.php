@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Money $credit_balance
+ * @property bool $is_admin
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -43,6 +44,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $attributes = [
         'credit_balance' => 0,
+        'is_admin' => false,
     ];
 
     /**
@@ -56,6 +58,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'credit_balance' => MoneyCast::class,
+            'is_admin' => 'boolean',
         ];
     }
 

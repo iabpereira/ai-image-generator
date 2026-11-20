@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Admin\Impersonation;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,8 +41,21 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'impersonator' => fn (): ?array => $this->impersonator(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * The admin behind the current session while impersonating, for the banner.
+     *
+     * @return array{name: string}|null
+     */
+    private function impersonator(): ?array
+    {
+        $impersonator = app(Impersonation::class)->impersonator();
+
+        return $impersonator === null ? null : ['name' => $impersonator->name];
     }
 }

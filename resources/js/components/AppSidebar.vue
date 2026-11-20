@@ -2,10 +2,12 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpen,
+    ChartColumn,
     FolderGit2,
     Images,
     LayoutGrid,
     Sparkles,
+    Users,
     Wallet,
 } from '@lucide/vue';
 import { computed } from 'vue';
@@ -23,6 +25,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { spendReport } from '@/routes/admin';
+import { index as usersIndex } from '@/routes/admin/users';
 import { index as creditsIndex } from '@/routes/credits';
 import { create, gallery } from '@/routes/generations';
 import { formatUsdString } from '@/lib/money';
@@ -52,6 +56,19 @@ const mainNavItems = computed<NavItem[]>(() => [
         icon: Wallet,
     },
 ]);
+
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Admin report',
+        href: spendReport(),
+        icon: ChartColumn,
+    },
+    {
+        title: 'Users',
+        href: usersIndex(),
+        icon: Users,
+    },
+];
 
 const footerNavItems: NavItem[] = [
     {
@@ -83,6 +100,11 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavMain
+                v-if="page.props.auth.user.is_admin"
+                :items="adminNavItems"
+                label="Admin"
+            />
         </SidebarContent>
 
         <SidebarFooter>

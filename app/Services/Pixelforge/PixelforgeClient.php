@@ -2,6 +2,8 @@
 
 namespace App\Services\Pixelforge;
 
+use App\Support\Money;
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -58,6 +60,28 @@ final readonly class PixelforgeClient
 
             return null;
         }
+    }
+
+    /**
+     * What Pixelforge billed this API key, per UTC day of completion (days without
+     * usage included). The source of truth for provider costs.
+     *
+     * @return array<string, Money> date (Y-m-d) => cost
+     */
+    public function usage(CarbonImmutable $start, CarbonImmutable $end): array
+    {
+        $payload = $this->send(fn (): Response => $this->authenticated()->get('/usage', [
+            'start_date' => $start->toDateString(),
+            'end_date' => $end->toDateString(),
+        ]));
+
+        $costs = [];
+
+        foreach ($payload['data'] as $day) {
+            $costs[$day['date']] = Money::fromDecimalString($day['cost_usd']);
+        }
+
+        return $costs;
     }
 
     private function baseRequest(): PendingRequest
