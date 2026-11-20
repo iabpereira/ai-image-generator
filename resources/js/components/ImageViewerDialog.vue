@@ -19,10 +19,13 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
 
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
-        <DialogContent v-if="generation" class="sm:max-w-4xl">
-            <DialogHeader>
+        <DialogContent
+            v-if="generation"
+            class="grid-cols-[minmax(0,1fr)] sm:max-w-4xl"
+        >
+            <DialogHeader class="min-w-0">
                 <DialogTitle
-                    class="line-clamp-2 pr-6"
+                    class="line-clamp-2 pr-6 [overflow-wrap:anywhere]"
                     :title="generation.prompt"
                 >
                     {{ generation.prompt }}
@@ -35,7 +38,7 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="flex justify-center">
+            <div class="flex min-w-0 justify-center">
                 <img
                     v-if="generation.image_src"
                     :src="generation.image_src"

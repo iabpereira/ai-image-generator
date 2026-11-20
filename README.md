@@ -141,7 +141,7 @@ Email (verification and password resets) is sent through Resend over SMTP.
 - `php artisan users:promote {email}` grants admin.
 - `php artisan generations:privatize-images` was a one-time move of images from the public to the private disk.
 
-An operator account for reviewers is provided separately, without the credentials.
+Reviewers get the credentials for an operator (admin) account with the submission; they are not stored in this repository.
 
 ## License
 

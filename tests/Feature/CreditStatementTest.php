@@ -47,3 +47,19 @@ it('folds each generation into a single statement entry', function () {
         ])
         ->and($entries[3])->toMatchArray(['kind' => 'purchase', 'amount' => '1.000000000', 'balance_after' => '1.000000000']);
 });
+
+it('orders entries by their latest activity', function () {
+    $user = User::factory()->create();
+    $ledger = app(CreditLedger::class);
+    $ledger->purchase($user, Money::fromDollars(1));
+    $first = heldFor($user, 10_000_000);
+    $second = heldFor($user, 10_000_000);
+
+    Generation::query()->whereKey($first->id)->update(['charged_amount' => 8_000_000]);
+    $ledger->settle($first->refresh());
+
+    $entries = app(CreditStatement::class)->forUser($user)->items();
+
+    expect(array_column($entries, 'generation_id'))->toBe([$first->id, $second->id, null])
+        ->and($entries[0]['balance_after'])->toBe('0.982000000');
+});
