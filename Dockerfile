@@ -54,7 +54,8 @@ WORKDIR /app
 COPY --from=builder /app /app
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
-RUN chmod +x /usr/local/bin/entrypoint \
+COPY docker/start.sh /usr/local/bin/start-app
+RUN chmod +x /usr/local/bin/entrypoint /usr/local/bin/start-app \
     && mkdir -p database/data storage/app/public storage/framework/cache/data \
         storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
 
@@ -69,4 +70,5 @@ HEALTHCHECK NONE
 EXPOSE 80
 
 ENTRYPOINT ["entrypoint"]
-CMD ["frankenphp", "php-server", "--root", "/app/public", "--listen", ":80"]
+# Web server + queue worker + scheduler (see docker/start.sh).
+CMD ["start-app"]

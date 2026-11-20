@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Services\Pixelforge\CostCalculator;
+use App\Services\Pixelforge\PixelforgeClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -15,7 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(CostCalculator::class, fn (): CostCalculator => new CostCalculator(
+            (int) config('services.pixelforge.markup_percent'),
+        ));
+
+        $this->app->bind(PixelforgeClient::class, fn (): PixelforgeClient => new PixelforgeClient(
+            (string) config('services.pixelforge.base_url'),
+            (string) config('services.pixelforge.api_key'),
+        ));
     }
 
     /**
@@ -24,6 +35,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Pixelforge allows 60 requests per minute per account, shared by every key.
+     * Submissions take at most 50, leaving headroom for polling and the local key.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('pixelforge', fn (): Limit => Limit::perMinute(50));
     }
 
     /**

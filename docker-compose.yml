@@ -9,7 +9,7 @@ services:
         container_name: ai-image-generator
         restart: unless-stopped
         env_file: .env.production
-        mem_limit: 256m
+        mem_limit: 384m
         volumes:
             - data:/app/database/data
             - storage:/app/storage/app
