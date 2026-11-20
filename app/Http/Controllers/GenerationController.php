@@ -4,14 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\GenerationQuality;
 use App\Enums\GenerationSize;
-use App\Enums\GenerationStatus;
 use App\Http\Requests\StoreGenerationRequest;
 use App\Http\Resources\GenerationResource;
 use App\Jobs\SubmitGeneration;
 use App\Services\Pixelforge\CostCalculator;
 use App\Services\Pixelforge\PixelforgeClient;
-use App\Services\Pixelforge\PixelforgeException;
-use App\Services\Pixelforge\Pricing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -40,23 +37,8 @@ class GenerationController extends Controller
     public function create(PixelforgeClient $client): Response
     {
         return Inertia::render('generations/Create', [
-            'pricing' => $this->pricingOrNull($client)?->toArray(),
+            'pricing' => $client->pricingOrNull()?->toArray(),
             'markupPercent' => (int) config('services.pixelforge.markup_percent'),
-        ]);
-    }
-
-    /**
-     * The user's finished images.
-     */
-    public function gallery(Request $request): Response
-    {
-        return Inertia::render('generations/Gallery', [
-            'generations' => GenerationResource::collection(
-                $request->user()->generations()
-                    ->where('status', GenerationStatus::Succeeded)
-                    ->latest('completed_at')
-                    ->paginate(24),
-            ),
         ]);
     }
 
@@ -70,7 +52,7 @@ class GenerationController extends Controller
         $quality = GenerationQuality::from($request->validated('quality'));
         $referenceImages = $request->referenceImages();
 
-        $pricing = $this->pricingOrNull($client) ?? throw ValidationException::withMessages([
+        $pricing = $client->pricingOrNull() ?? throw ValidationException::withMessages([
             'pricing' => __('Pricing is temporarily unavailable, so we can\'t quote this generation. Please try again in a moment.'),
         ]);
 
@@ -91,16 +73,5 @@ class GenerationController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Generation queued.')]);
 
         return to_route('dashboard');
-    }
-
-    private function pricingOrNull(PixelforgeClient $client): ?Pricing
-    {
-        try {
-            return $client->pricing();
-        } catch (PixelforgeException $exception) {
-            report($exception);
-
-            return null;
-        }
     }
 }

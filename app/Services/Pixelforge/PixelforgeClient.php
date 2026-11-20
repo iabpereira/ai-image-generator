@@ -45,6 +45,21 @@ final readonly class PixelforgeClient
         return Pricing::fromApi($payload);
     }
 
+    /**
+     * The price list, or null when Pixelforge can't be reached and nothing is cached.
+     * The failure is reported so it shows up in the logs.
+     */
+    public function pricingOrNull(): ?Pricing
+    {
+        try {
+            return $this->pricing();
+        } catch (PixelforgeException $exception) {
+            report($exception);
+
+            return null;
+        }
+    }
+
     private function baseRequest(): PendingRequest
     {
         return Http::baseUrl($this->baseUrl)->acceptJson()->asJson()->connectTimeout(5)->timeout(15);

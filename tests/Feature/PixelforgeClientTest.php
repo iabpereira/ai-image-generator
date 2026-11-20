@@ -77,3 +77,9 @@ it('caches pricing', function () {
     expect($pricing->textTokenVariancePercent)->toBe(15);
     Http::assertSentCount(1);
 });
+
+it('returns null pricing when pixelforge is unreachable and nothing is cached', function () {
+    Http::fake(['*/pricing' => Http::response(['error' => ['code' => 'overloaded', 'message' => 'busy']], 503)]);
+
+    expect(app(PixelforgeClient::class)->pricingOrNull())->toBeNull();
+});
