@@ -118,3 +118,9 @@ it('shows only the current user succeeded images in the gallery', function () {
             ->has('generations.data', 1)
             ->where('generations.data.0.id', $image->id));
 });
+
+it('redirects the old generation URLs', function (string $uri, string $destination) {
+    $this->actingAs(User::factory()->create())
+        ->get($uri)
+        ->assertRedirect($destination);
+})->with([['/generations', '/dashboard'], ['/generations/create', '/generate']]);
