@@ -35,7 +35,7 @@ Money is stored as integer nanodollars (1 USD = 10^9), because Pixelforge report
 
 ### Markup and rounding
 
-The charge is the provider cost times 125/100, rounded up to the next nanodollar, so we never undercharge by a fraction. The UI shows 4 decimals. The exact 9-decimal value is in a tooltip.
+The charge is the provider cost times (10,000 + markup in basis points) / 10,000, 125/100 with the default 25% markup, rounded up to the next nanodollar, so we never undercharge by a fraction. The UI shows 4 decimals. The exact 9-decimal value is in a tooltip.
 
 ### Estimate vs. actual charge
 
