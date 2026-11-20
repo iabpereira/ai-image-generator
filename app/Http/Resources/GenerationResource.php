@@ -27,6 +27,7 @@ class GenerationResource extends JsonResource
             'maximum_charge' => $this->maximum_charge->toDecimalString(),
             'charged_amount' => $this->charged_amount?->toDecimalString(),
             'image_src' => $this->image_src,
+            'image_download_url' => $this->image_path === null ? null : route('generations.image', ['generation' => $this->resource, 'download' => 1]),
             'image_expired' => $this->image_src === null && $this->image_url !== null,
             'error_message' => $this->error_message,
             'created_at' => $this->created_at->toIso8601String(),
