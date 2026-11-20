@@ -37,8 +37,8 @@ it('shows the balance, packs and statement', function () {
         ->assertInertia(fn (Assert $page) => $page->component('credits/Index')
             ->where('auth.user.credit_balance', '1.000000000')
             ->where('packs', [1, 5, 20])
-            ->where('transactions.data.0.type', 'purchase')
-            ->where('transactions.data.0.amount', '1.000000000')
-            ->where('transactions.meta.last_page', 1)
-            ->where('transactions.links.prev', null));
+            ->where('statement.data.0.kind', 'purchase')
+            ->where('statement.data.0.amount', '1.000000000')
+            ->where('statement.meta.last_page', 1)
+            ->where('statement.links.prev', null));
 });

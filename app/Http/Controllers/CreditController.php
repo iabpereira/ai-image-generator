@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PurchaseCreditsRequest;
-use App\Http\Resources\CreditTransactionResource;
 use App\Services\Credits\CreditLedger;
+use App\Services\Credits\CreditStatement;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,15 +18,13 @@ class CreditController extends Controller
     public const array PACKS = [1, 5, 20];
 
     /**
-     * The balance, the packs to buy and the ledger statement.
+     * The balance, the packs to buy and the statement (one entry per purchase or image).
      */
-    public function index(Request $request): Response
+    public function index(Request $request, CreditStatement $statement): Response
     {
         return Inertia::render('credits/Index', [
             'packs' => self::PACKS,
-            'transactions' => CreditTransactionResource::collection(
-                $request->user()->creditTransactions()->latest('id')->paginate(20),
-            ),
+            'statement' => JsonResource::collection($statement->forUser($request->user())),
         ]);
     }
 

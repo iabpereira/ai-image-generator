@@ -2,27 +2,40 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { decimalToNanos, formatUsdString } from '@/lib/money';
+import {
+    decimalToNanos,
+    formatSignedUsd,
+    formatUsd,
+    formatUsdString,
+} from '@/lib/money';
 import { index, store } from '@/routes/credits';
-import type { Paginated } from '@/types/generation';
 
-type CreditTransactionType = 'purchase' | 'hold' | 'release' | 'charge';
-
-type CreditTransaction = {
-    id: number;
-    type: CreditTransactionType;
-    amount: string;
-    balance_after: string;
+type StatementEntry = {
+    key: string;
+    kind: 'purchase' | 'generation';
     generation_id: number | null;
+    status: 'pending' | 'charged' | 'refunded' | null;
+    amount: string;
+    reserved: string | null;
+    charged: string | null;
+    returned: string | null;
+    balance_after: string;
     created_at: string;
+};
+
+type Statement = {
+    data: StatementEntry[];
+    links: { prev: string | null; next: string | null };
+    meta: { current_page: number; last_page: number };
 };
 
 defineProps<{
     packs: number[];
-    transactions: Paginated<CreditTransaction>;
+    statement: Statement;
 }>();
 
 defineOptions({
@@ -55,23 +68,59 @@ function buy(pack: number): void {
     );
 }
 
-function describe(transaction: CreditTransaction): string {
-    switch (transaction.type) {
-        case 'purchase':
-            return 'Credits purchased';
-        case 'hold':
-            return `Reserved for image #${transaction.generation_id}`;
-        case 'release':
-            return `Reservation returned for image #${transaction.generation_id}`;
-        case 'charge':
-            return `Charged for image #${transaction.generation_id}`;
+function describe(entry: StatementEntry): string {
+    if (entry.kind === 'purchase') {
+        return 'Credits purchased';
+    }
+
+    switch (entry.status) {
+        case 'pending':
+            return `Image #${entry.generation_id} · Reserved`;
+        case 'charged':
+            return `Image #${entry.generation_id} · Charged`;
+        default:
+            return `Image #${entry.generation_id} · Failed, not charged`;
     }
 }
 
-function formatSignedAmount(amount: string): string {
+function detail(entry: StatementEntry): string | null {
+    if (entry.kind !== 'generation') {
+        return null;
+    }
+
+    switch (entry.status) {
+        case 'pending':
+            return "Pending: the actual price is charged when it's done";
+        case 'charged': {
+            const refund =
+                decimalToNanos(entry.returned ?? '0') -
+                decimalToNanos(entry.charged ?? '0');
+
+            return `Reserved ${formatUsdString(entry.reserved ?? '0')}, ${formatUsd(refund)} returned`;
+        }
+        case 'refunded':
+            return `Reservation of ${formatUsdString(entry.reserved ?? '0')} returned`;
+        default:
+            return null;
+    }
+}
+
+const statusLabels = {
+    pending: 'Pending',
+    charged: 'Charged',
+    refunded: 'Failed',
+} as const;
+
+function amountClass(amount: string): string {
     const nanos = decimalToNanos(amount);
 
-    return `${nanos > 0 ? '+' : ''}${formatUsdString(amount)}`;
+    if (nanos > 0) {
+        return 'text-green-600 dark:text-green-400';
+    }
+
+    return nanos < 0
+        ? 'text-red-600 dark:text-red-400'
+        : 'text-muted-foreground';
 }
 
 function formatDate(isoDate: string): string {
@@ -147,7 +196,7 @@ function formatDate(isoDate: string): string {
             <h2 class="mb-3 text-base font-semibold">Statement</h2>
 
             <div
-                v-if="transactions.data.length === 0"
+                v-if="statement.data.length === 0"
                 class="rounded-xl border border-dashed p-12 text-center text-muted-foreground"
             >
                 No transactions yet.
@@ -172,36 +221,52 @@ function formatDate(isoDate: string): string {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="transaction in transactions.data"
-                            :key="transaction.id"
+                            v-for="entry in statement.data"
+                            :key="entry.key"
                             class="border-t border-sidebar-border/70 dark:border-sidebar-border"
                         >
                             <td
                                 class="px-4 py-3 whitespace-nowrap text-muted-foreground"
                             >
-                                <time :datetime="transaction.created_at">
-                                    {{ formatDate(transaction.created_at) }}
+                                <time :datetime="entry.created_at">
+                                    {{ formatDate(entry.created_at) }}
                                 </time>
                             </td>
                             <td class="px-4 py-3">
-                                {{ describe(transaction) }}
+                                <div class="flex items-center gap-2">
+                                    <span>{{ describe(entry) }}</span>
+                                    <Badge
+                                        v-if="entry.status"
+                                        :variant="
+                                            entry.status === 'refunded'
+                                                ? 'destructive'
+                                                : entry.status === 'charged'
+                                                  ? 'secondary'
+                                                  : 'outline'
+                                        "
+                                    >
+                                        {{ statusLabels[entry.status] }}
+                                    </Badge>
+                                </div>
+                                <p
+                                    v-if="detail(entry)"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    {{ detail(entry) }}
+                                </p>
                             </td>
                             <td
                                 class="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums"
-                                :class="
-                                    decimalToNanos(transaction.amount) > 0
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : 'text-red-600 dark:text-red-400'
-                                "
-                                :title="`$${transaction.amount}`"
+                                :class="amountClass(entry.amount)"
+                                :title="`$${entry.amount}`"
                             >
-                                {{ formatSignedAmount(transaction.amount) }}
+                                {{ formatSignedUsd(entry.amount) }}
                             </td>
                             <td
                                 class="px-4 py-3 text-right whitespace-nowrap tabular-nums"
-                                :title="`$${transaction.balance_after}`"
+                                :title="`$${entry.balance_after}`"
                             >
-                                {{ formatUsdString(transaction.balance_after) }}
+                                {{ formatUsdString(entry.balance_after) }}
                             </td>
                         </tr>
                     </tbody>
@@ -209,19 +274,16 @@ function formatDate(isoDate: string): string {
             </div>
 
             <nav
-                v-if="transactions.meta.last_page > 1"
+                v-if="statement.meta.last_page > 1"
                 class="mt-4 flex items-center justify-between text-sm"
             >
                 <Button
-                    v-if="transactions.links.prev"
+                    v-if="statement.links.prev"
                     variant="outline"
                     size="sm"
                     as-child
                 >
-                    <Link
-                        :href="transactions.links.prev"
-                        :only="['transactions']"
-                    >
+                    <Link :href="statement.links.prev" :only="['statement']">
                         Previous
                     </Link>
                 </Button>
@@ -229,19 +291,16 @@ function formatDate(isoDate: string): string {
                     Previous
                 </Button>
                 <span class="text-muted-foreground">
-                    Page {{ transactions.meta.current_page }} of
-                    {{ transactions.meta.last_page }}
+                    Page {{ statement.meta.current_page }} of
+                    {{ statement.meta.last_page }}
                 </span>
                 <Button
-                    v-if="transactions.links.next"
+                    v-if="statement.links.next"
                     variant="outline"
                     size="sm"
                     as-child
                 >
-                    <Link
-                        :href="transactions.links.next"
-                        :only="['transactions']"
-                    >
+                    <Link :href="statement.links.next" :only="['statement']">
                         Next
                     </Link>
                 </Button>
