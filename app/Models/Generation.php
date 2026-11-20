@@ -19,8 +19,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Status, provider id and money columns are deliberately not fillable: only
- * GenerationLifecycle writes them, through compare-and-set updates.
+ * Status, provider id, provider cost and charge are deliberately not fillable: only
+ * GenerationLifecycle writes them, through compare-and-set updates. New generations
+ * start as pending. The estimates are fillable because they are set once, at creation.
  *
  * @property int $id
  * @property string $uuid
@@ -51,13 +52,26 @@ use Illuminate\Support\Facades\Storage;
  * @property-read string|null $image_src
  */
 #[Fillable([
-    'uuid', 'status', 'prompt', 'size', 'quality', 'reference_images',
+    'uuid', 'prompt', 'size', 'quality', 'reference_images',
     'estimated_charge', 'maximum_charge', 'image_path', 'submission_attempts',
 ])]
 class Generation extends Model
 {
     /** @use HasFactory<GenerationFactory> */
     use HasFactory;
+
+    /**
+     * Rows with no status change for this long are not really in flight at Pixelforge
+     * (it finishes within minutes); counting them would block new submissions forever.
+     */
+    public const int STALLED_AFTER_MINUTES = 10;
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => 'pending',
+    ];
 
     /**
      * @return array<string, string>
@@ -98,7 +112,8 @@ class Generation extends Model
     #[Scope]
     protected function occupyingProviderSlot(Builder $query): void
     {
-        $query->whereIn('status', [GenerationStatus::Queued, GenerationStatus::Processing]);
+        $query->whereIn('status', [GenerationStatus::Queued, GenerationStatus::Processing])
+            ->where('updated_at', '>=', now()->subMinutes(self::STALLED_AFTER_MINUTES));
     }
 
     /**

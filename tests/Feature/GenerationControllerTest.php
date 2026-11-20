@@ -4,6 +4,8 @@ use App\Enums\GenerationStatus;
 use App\Jobs\SubmitGeneration;
 use App\Models\Generation;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -82,4 +84,27 @@ it('lists only the current user generations, newest first', function () {
             ->has('generations.data', 2)
             ->where('generations.data.0.id', $newer->id)
             ->where('generations.data.1.charged_amount', '0.381887500'));
+});
+
+it('still shows the dashboard when pricing is unavailable', function () {
+    Cache::forget('pixelforge.pricing');
+    Http::fake(['*/pricing' => Http::response(['error' => ['code' => 'overloaded', 'message' => 'busy']], 503)]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('Dashboard')->where('pricing', null));
+});
+
+it('explains that generating is unavailable when pricing cannot be loaded', function () {
+    Cache::forget('pixelforge.pricing');
+    Http::fake(['*/pricing' => Http::response(['error' => ['code' => 'overloaded', 'message' => 'busy']], 503)]);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('generations.store'), ['prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low'])
+        ->assertSessionHasErrors('pricing');
+
+    expect($user->generations()->count())->toBe(0);
+    Queue::assertNothingPushed();
 });

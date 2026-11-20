@@ -24,7 +24,10 @@ import type {
     Pricing,
 } from '@/types/generation';
 
-const props = defineProps<{ pricing: Pricing; markupPercent: number }>();
+const props = defineProps<{
+    pricing: Pricing | null;
+    markupPercent: number;
+}>();
 
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_REFERENCE_IMAGES = 4;
@@ -49,14 +52,21 @@ const canAddReferenceImage = computed(
 );
 
 const estimate = computed(() =>
-    estimateCharge(
-        props.pricing,
-        props.markupPercent,
-        form.prompt,
-        form.size,
-        form.quality,
-        filledReferenceImages.value.length,
-    ),
+    props.pricing === null
+        ? null
+        : estimateCharge(
+              props.pricing,
+              props.markupPercent,
+              form.prompt,
+              form.size,
+              form.quality,
+              filledReferenceImages.value.length,
+          ),
+);
+
+/** Server-side error when the price list could not be loaded on submit. */
+const pricingError = computed(
+    () => (form.errors as Record<string, string | undefined>).pricing,
 );
 
 const referenceImageErrors = computed(() =>
@@ -189,7 +199,9 @@ function submit(): void {
                 </Button>
             </div>
 
-            <Button type="submit" :disabled="form.processing">
+            <InputError :message="pricingError" />
+
+            <Button type="submit" :disabled="form.processing || !pricing">
                 <Spinner v-if="form.processing" />
                 Generate
             </Button>
@@ -199,7 +211,14 @@ function submit(): void {
             <CardHeader>
                 <CardTitle>Cost</CardTitle>
             </CardHeader>
-            <CardContent class="space-y-3 text-sm">
+            <CardContent v-if="!estimate" class="space-y-2 text-sm">
+                <p class="font-medium">Pricing is temporarily unavailable.</p>
+                <p class="text-muted-foreground">
+                    We can't reach Pixelforge's price list right now, so we
+                    can't quote a generation. Please reload in a moment.
+                </p>
+            </CardContent>
+            <CardContent v-else class="space-y-3 text-sm">
                 <div>
                     <p class="text-3xl font-semibold tabular-nums">
                         {{ formatUsd(estimate.typical) }}
@@ -223,7 +242,7 @@ function submit(): void {
                     <li>Higher quality and larger sizes cost more.</li>
                     <li>
                         Each reference image adds
-                        {{ pricing.tokens_per_reference_image }} tokens.
+                        {{ pricing?.tokens_per_reference_image }} tokens.
                     </li>
                 </ul>
             </CardContent>

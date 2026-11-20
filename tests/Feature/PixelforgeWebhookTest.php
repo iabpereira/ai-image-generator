@@ -116,3 +116,26 @@ it('runs outside the web middleware group, without a session or cookies', functi
         ->assertCookieMissing(config('session.cookie'))
         ->assertCookieMissing('XSRF-TOKEN');
 });
+
+it('answers malformed events with a json 422, not a redirect', function () {
+    $body = json_encode(['object' => 'event']);
+    $timestamp = time();
+    $signature = hash_hmac('sha256', "{$timestamp}.{$body}", 'whsec_test');
+
+    $this->call('POST', route('webhooks.pixelforge'), [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_PIXELFORGE_SIGNATURE' => "t={$timestamp},v1={$signature}",
+    ], $body)->assertStatus(422)->assertJsonValidationErrors('id');
+});
+
+it('accepts the request when any of several v1 signatures matches', function () {
+    $generation = Generation::factory()->processing()->create();
+    $body = json_encode(generationEvent($generation, 'processing'));
+    $timestamp = time();
+    $signature = hash_hmac('sha256', "{$timestamp}.{$body}", 'whsec_test');
+
+    $this->call('POST', route('webhooks.pixelforge'), [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_PIXELFORGE_SIGNATURE' => "t={$timestamp},v1=".str_repeat('0', 64).",v1={$signature}",
+    ], $body)->assertOk();
+});

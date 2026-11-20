@@ -10,7 +10,7 @@ import type { Generation, Paginated, Pricing } from '@/types/generation';
 
 const props = defineProps<{
     generations: Paginated<Generation>;
-    pricing: Pricing;
+    pricing: Pricing | null;
     markupPercent: number;
 }>();
 
@@ -95,36 +95,42 @@ watch(hasActiveGenerations, (active) => (active ? start() : stop()), {
                 class="flex items-center justify-between text-sm"
             >
                 <Button
+                    v-if="generations.links.prev"
                     variant="outline"
                     size="sm"
-                    :disabled="!generations.links.prev"
                     as-child
                 >
                     <Link
-                        :href="generations.links.prev ?? ''"
+                        :href="generations.links.prev"
                         preserve-scroll
                         :only="['generations']"
                     >
                         Previous
                     </Link>
                 </Button>
+                <Button v-else variant="outline" size="sm" disabled>
+                    Previous
+                </Button>
                 <span class="text-muted-foreground">
                     Page {{ generations.meta.current_page }} of
                     {{ generations.meta.last_page }}
                 </span>
                 <Button
+                    v-if="generations.links.next"
                     variant="outline"
                     size="sm"
-                    :disabled="!generations.links.next"
                     as-child
                 >
                     <Link
-                        :href="generations.links.next ?? ''"
+                        :href="generations.links.next"
                         preserve-scroll
                         :only="['generations']"
                     >
                         Next
                     </Link>
+                </Button>
+                <Button v-else variant="outline" size="sm" disabled>
+                    Next
                 </Button>
             </nav>
         </section>

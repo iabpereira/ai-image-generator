@@ -102,3 +102,20 @@ it('marks the generation failed when the job finally fails', function () {
 
     expect($generation->refresh())->status->toBe(GenerationStatus::Failed)->error_code->toBe('submission_timeout');
 });
+
+it('does not fail a generation pixelforge already accepted when the job gives up', function () {
+    $generation = Generation::factory()->queued()->create();
+
+    (new SubmitGeneration($generation))->failed(new RuntimeException('max exceptions'));
+
+    expect($generation->refresh()->status)->toBe(GenerationStatus::Queued);
+});
+
+it('does not count long-stalled generations as occupying a provider slot', function () {
+    Generation::factory()->count(3)->processing()->create(['updated_at' => now()->subMinutes(30)]);
+    $generation = Generation::factory()->create();
+    Http::fake(['*/generations' => Http::response(providerSnapshot($generation, 'queued', ['id' => 'gen_1']), 202)]);
+
+    runSubmit($generation)->assertNotReleased();
+    expect($generation->refresh()->status)->toBe(GenerationStatus::Queued);
+});

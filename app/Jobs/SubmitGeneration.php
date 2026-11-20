@@ -79,7 +79,7 @@ class SubmitGeneration implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        app(GenerationLifecycle::class)->fail(
+        app(GenerationLifecycle::class)->failSubmission(
             $this->generation,
             'submission_timeout',
             'Pixelforge stayed busy for too long, so we stopped trying. You were not charged.',
@@ -101,7 +101,7 @@ class SubmitGeneration implements ShouldQueue
         }
 
         if (! $exception->isTransient()) {
-            $lifecycle->fail($generation, $exception->errorCode, $exception->userMessage());
+            $lifecycle->failSubmission($generation, $exception->errorCode, $exception->userMessage());
 
             return;
         }
@@ -110,7 +110,7 @@ class SubmitGeneration implements ShouldQueue
         $generation->update(['submission_attempts' => $attempts]);
 
         if ($attempts >= self::MAX_TRANSIENT_ATTEMPTS) {
-            $lifecycle->fail($generation, 'submission_failed', 'Pixelforge is unavailable right now. You were not charged.');
+            $lifecycle->failSubmission($generation, 'submission_failed', 'Pixelforge is unavailable right now. You were not charged.');
 
             return;
         }

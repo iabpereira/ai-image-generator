@@ -25,23 +25,35 @@ class VerifyPixelforgeSignature
     private function hasValidSignature(Request $request): bool
     {
         $secret = (string) config('services.pixelforge.webhook_secret');
-        $parts = [];
+        $timestamp = '';
+        $signatures = [];
 
         foreach (explode(',', (string) $request->header('Pixelforge-Signature')) as $part) {
             [$key, $value] = array_pad(explode('=', trim($part), 2), 2, '');
-            $parts[$key] = $value;
+
+            if ($key === 't') {
+                $timestamp = $value;
+            } elseif ($key === 'v1' && $value !== '') {
+                $signatures[] = $value;
+            }
         }
 
-        $timestamp = $parts['t'] ?? '';
-        $signature = $parts['v1'] ?? '';
+        if ($secret === '' || ! ctype_digit($timestamp) || $signatures === []) {
+            return false;
+        }
 
-        if ($secret === '' || ! ctype_digit($timestamp) || $signature === '') {
+        if (abs(time() - (int) $timestamp) > self::TOLERANCE_SECONDS) {
             return false;
         }
 
         $expected = hash_hmac('sha256', "{$timestamp}.{$request->getContent()}", $secret);
 
-        return hash_equals($expected, $signature)
-            && abs(time() - (int) $timestamp) <= self::TOLERANCE_SECONDS;
+        foreach ($signatures as $signature) {
+            if (hash_equals($expected, $signature)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

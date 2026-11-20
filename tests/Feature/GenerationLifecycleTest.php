@@ -85,3 +85,45 @@ it('fails locally without cost', function () {
         ->error_message->toBe('Rejected')
         ->and($generation->charged_amount->nanos)->toBe(0);
 });
+
+it('ignores snapshots with an unknown status', function () {
+    $generation = Generation::factory()->processing()->create();
+
+    expect(app(GenerationLifecycle::class)->apply($generation, providerSnapshot($generation, 'canceled')))->toBeFalse()
+        ->and($generation->refresh()->status)->toBe(GenerationStatus::Processing);
+});
+
+it('ignores a succeeded snapshot without usage', function () {
+    $generation = Generation::factory()->processing()->create();
+
+    expect(app(GenerationLifecycle::class)->apply($generation, providerSnapshot($generation, 'succeeded', ['usage' => null])))->toBeFalse()
+        ->and($generation->refresh()->status)->toBe(GenerationStatus::Processing);
+});
+
+it('recovers a generation we failed locally when pixelforge reports it after all', function () {
+    $generation = Generation::factory()->create();
+    app(GenerationLifecycle::class)->failSubmission($generation, 'submission_failed', 'Pixelforge is unavailable.');
+
+    $changed = app(GenerationLifecycle::class)->apply($generation, providerSnapshot($generation, 'succeeded', ['id' => 'gen_late']));
+
+    expect($changed)->toBeTrue()
+        ->and($generation->refresh())
+        ->status->toBe(GenerationStatus::Succeeded)
+        ->provider_id->toBe('gen_late')
+        ->error_code->toBeNull()
+        ->and($generation->charged_amount->toDecimalString())->toBe('0.381887500');
+});
+
+it('does not recover generations pixelforge itself rejected', function () {
+    $generation = Generation::factory()->create();
+    app(GenerationLifecycle::class)->failSubmission($generation, 'content_policy_violation', 'Rejected.');
+
+    expect(app(GenerationLifecycle::class)->apply($generation, providerSnapshot($generation, 'succeeded')))->toBeFalse();
+});
+
+it('only fails a submission that pixelforge has not accepted', function () {
+    $generation = Generation::factory()->queued()->create();
+
+    expect(app(GenerationLifecycle::class)->failSubmission($generation, 'submission_timeout', 'Timed out.'))->toBeFalse()
+        ->and($generation->refresh()->status)->toBe(GenerationStatus::Queued);
+});

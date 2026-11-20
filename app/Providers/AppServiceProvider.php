@@ -35,8 +35,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
+    }
 
-        // Pixelforge allows 60 requests/minute per account; keep headroom for polling and the local key.
+    /**
+     * Pixelforge allows 60 requests per minute per account, shared by every key.
+     * Submissions take at most 50, leaving headroom for polling and the local key.
+     */
+    protected function configureRateLimiting(): void
+    {
         RateLimiter::for('pixelforge', fn (): Limit => Limit::perMinute(50));
     }
 
