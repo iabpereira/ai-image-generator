@@ -9,11 +9,14 @@ use App\Support\Money;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The user-facing statement: one entry per purchase and one per generation, built
  * from the append-only ledger. A generation's hold, release and charge lines are
  * folded into a single entry; the ledger itself keeps every line for auditing.
+ * Entries are ordered by their latest activity, so a generation settled after a
+ * later reservation appears above it and the statement reads chronologically.
  *
  * kind is 'purchase' or 'generation'; status is 'pending', 'charged', 'refunded' or null.
  *
@@ -28,7 +31,7 @@ final class CreditStatement
     {
         $anchors = $user->creditTransactions()
             ->whereIn('type', [CreditTransactionType::Purchase, CreditTransactionType::Hold])
-            ->latest('id')
+            ->orderByDesc(DB::raw('coalesce((select max(latest.id) from credit_transactions as latest where latest.generation_id = credit_transactions.generation_id), credit_transactions.id)'))
             ->paginate($perPage);
 
         $followUps = CreditTransaction::query()
