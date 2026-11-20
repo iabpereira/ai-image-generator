@@ -19,24 +19,17 @@ use Inertia\Response;
 class GenerationController extends Controller
 {
     /**
-     * The user's generation history.
+     * The dashboard: the generate form with its live estimate, and the user's generations.
+     *
+     * Pricing is lazy so the status polling, which reloads only the generations, skips it.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, PixelforgeClient $client): Response
     {
-        return Inertia::render('generations/Index', [
+        return Inertia::render('Dashboard', [
             'generations' => GenerationResource::collection(
                 $request->user()->generations()->latest('id')->paginate(12),
             ),
-        ]);
-    }
-
-    /**
-     * The generate form, with the price list for the live estimate.
-     */
-    public function create(PixelforgeClient $client): Response
-    {
-        return Inertia::render('generations/Create', [
-            'pricing' => $client->pricing()->toArray(),
+            'pricing' => fn (): array => $client->pricing()->toArray(),
             'markupPercent' => (int) config('services.pixelforge.markup_percent'),
         ]);
     }
@@ -68,6 +61,6 @@ class GenerationController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Generation queued.')]);
 
-        return to_route('generations.index');
+        return to_route('dashboard');
     }
 }

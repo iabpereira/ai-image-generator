@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { Plus, X } from '@lucide/vue';
 import { computed } from 'vue';
 import InputError from '@/components/InputError.vue';
@@ -17,7 +17,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { formatUsd } from '@/lib/money';
 import { codePointLength, estimateCharge } from '@/lib/pricing';
-import { create, index, store } from '@/routes/generations';
+import { store } from '@/routes/generations';
 import type {
     GenerationQuality,
     GenerationSize,
@@ -25,15 +25,6 @@ import type {
 } from '@/types/generation';
 
 const props = defineProps<{ pricing: Pricing; markupPercent: number }>();
-
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            { title: 'History', href: index() },
-            { title: 'Generate', href: create() },
-        ],
-    },
-});
 
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_REFERENCE_IMAGES = 4;
@@ -89,15 +80,14 @@ function submit(): void {
         ...data,
         reference_images: filledReferenceImages.value,
     })).post(store.url(), {
+        preserveScroll: true,
         onSuccess: () => form.reset(),
     });
 }
 </script>
 
 <template>
-    <Head title="Generate" />
-
-    <div class="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <form class="space-y-6" @submit.prevent="submit">
             <div class="space-y-2">
                 <Label for="prompt">Prompt</Label>
@@ -105,7 +95,7 @@ function submit(): void {
                     id="prompt"
                     v-model="form.prompt"
                     :maxlength="MAX_PROMPT_LENGTH"
-                    rows="6"
+                    rows="4"
                     required
                     class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     placeholder="A lighthouse at dusk, oil painting"

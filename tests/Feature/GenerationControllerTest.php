@@ -13,18 +13,31 @@ beforeEach(function () {
 });
 
 it('requires authentication', function () {
-    $this->get(route('generations.create'))->assertRedirect(route('login'));
-    $this->get(route('generations.index'))->assertRedirect(route('login'));
+    $this->get(route('dashboard'))->assertRedirect(route('login'));
     $this->post(route('generations.store'))->assertRedirect(route('login'));
 });
 
-it('shows the generate page with pricing', function () {
+it('requires a verified email to generate', function () {
+    $this->actingAs(User::factory()->unverified()->create())
+        ->post(route('generations.store'), ['prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low'])
+        ->assertRedirect(route('verification.notice'));
+
+    Queue::assertNothingPushed();
+});
+
+it('shows the generate form with pricing on the dashboard', function () {
     $this->actingAs(User::factory()->create())
-        ->get(route('generations.create'))
-        ->assertInertia(fn (Assert $page) => $page->component('generations/Create')
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->component('Dashboard')
             ->where('pricing.rates.output_tokens', '40.00')
             ->where('markupPercent', 25));
 });
+
+it('redirects the old generation pages to the dashboard', function (string $uri) {
+    $this->actingAs(User::factory()->create())
+        ->get($uri)
+        ->assertRedirect('/dashboard');
+})->with(['/generations', '/generations/create']);
 
 it('stores a pending generation with its estimate and queues submission', function () {
     $user = User::factory()->create();
@@ -34,7 +47,7 @@ it('stores a pending generation with its estimate and queues submission', functi
         'size' => '1536x1024',
         'quality' => 'high',
         'reference_images' => ['https://example.com/a.png', 'https://example.com/b.png'],
-    ])->assertRedirect(route('generations.index'));
+    ])->assertRedirect(route('dashboard'));
 
     $generation = $user->generations()->sole();
     expect($generation->status)->toBe(GenerationStatus::Pending)
@@ -64,8 +77,8 @@ it('lists only the current user generations, newest first', function () {
     $newer = Generation::factory()->for($user)->create();
     Generation::factory()->create();
 
-    $this->actingAs($user)->get(route('generations.index'))
-        ->assertInertia(fn (Assert $page) => $page->component('generations/Index')
+    $this->actingAs($user)->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->component('Dashboard')
             ->has('generations.data', 2)
             ->where('generations.data.0.id', $newer->id)
             ->where('generations.data.1.charged_amount', '0.381887500'));
