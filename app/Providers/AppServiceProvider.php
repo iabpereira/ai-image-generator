@@ -40,6 +40,10 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         Gate::define('viewAdminReport', fn (User $user): bool => $user->is_admin);
+        Gate::define('manageUsers', fn (User $user): bool => $user->is_admin);
+        Gate::define('impersonate', fn (User $admin, User $user): bool => $admin->is_admin
+            && ! $user->is_admin
+            && ! $admin->is($user));
     }
 
     /**
