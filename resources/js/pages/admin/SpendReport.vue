@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { decimalToNanos, formatUsd, formatUsdString } from '@/lib/money';
+import { formatMarkup } from '@/lib/pricing';
 import { spendReport } from '@/routes/admin';
 
 type Totals = {
@@ -14,6 +15,7 @@ type Totals = {
     charged: string;
     provider_cost: string;
     profit: string;
+    effective_markup_basis_points: number | null;
 };
 
 type UserRow = Totals & {
@@ -31,6 +33,7 @@ type DayRow = Totals & {
 
 const props = defineProps<{
     filters: { start_date: string; end_date: string };
+    currentMarkupBasisPoints: number;
     report: {
         rows: UserRow[];
         days: DayRow[];
@@ -45,8 +48,21 @@ defineOptions({
     },
 });
 
+type ReportTab = 'daily' | 'users';
+
+const activeTab = ref<ReportTab>('daily');
+
 const startDate = ref(props.filters.start_date);
 const endDate = ref(props.filters.end_date);
+
+function tabClass(isActive: boolean): string {
+    return [
+        '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+        isActive
+            ? 'border-primary text-foreground'
+            : 'border-transparent text-muted-foreground hover:text-foreground',
+    ].join(' ');
+}
 
 function apply(): void {
     router.get(
@@ -104,7 +120,7 @@ function difference(day: DayRow): string {
             <AlertDescription>{{ report.usage_error }}</AlertDescription>
         </Alert>
 
-        <div class="grid gap-4 md:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card>
                 <CardHeader>
                     <CardTitle
@@ -165,10 +181,74 @@ function difference(day: DayRow): string {
                     </p>
                 </CardContent>
             </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle
+                        class="text-sm font-medium text-muted-foreground"
+                    >
+                        Effective markup
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p class="text-2xl font-semibold tabular-nums">
+                        <template
+                            v-if="
+                                report.totals.effective_markup_basis_points !==
+                                null
+                            "
+                        >
+                            {{
+                                formatMarkup(
+                                    report.totals.effective_markup_basis_points,
+                                )
+                            }}
+                        </template>
+                        <template v-else>—</template>
+                    </p>
+                    <p class="text-sm text-muted-foreground">
+                        Profit ÷ provider cost. Markup in force:
+                        {{ formatMarkup(currentMarkupBasisPoints) }}
+                    </p>
+                </CardContent>
+            </Card>
         </div>
 
-        <section class="flex flex-col gap-3">
-            <h2 class="text-lg font-semibold">Daily reconciliation</h2>
+        <div
+            role="tablist"
+            aria-label="Report sections"
+            class="flex gap-1 border-b border-sidebar-border/70 dark:border-sidebar-border"
+        >
+            <button
+                id="tab-daily"
+                type="button"
+                role="tab"
+                aria-controls="panel-daily"
+                :aria-selected="activeTab === 'daily'"
+                :class="tabClass(activeTab === 'daily')"
+                @click="activeTab = 'daily'"
+            >
+                Daily reconciliation
+            </button>
+            <button
+                id="tab-users"
+                type="button"
+                role="tab"
+                aria-controls="panel-users"
+                :aria-selected="activeTab === 'users'"
+                :class="tabClass(activeTab === 'users')"
+                @click="activeTab = 'users'"
+            >
+                Per user ({{ report.rows.length }})
+            </button>
+        </div>
+
+        <section
+            id="panel-daily"
+            v-show="activeTab === 'daily'"
+            role="tabpanel"
+            aria-labelledby="tab-daily"
+            class="flex flex-col gap-3"
+        >
             <div
                 class="overflow-x-auto rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
             >
@@ -184,6 +264,12 @@ function difference(day: DayRow): string {
                             </th>
                             <th class="px-4 py-3 text-right font-medium">
                                 Provider cost
+                            </th>
+                            <th class="px-4 py-3 text-right font-medium">
+                                Profit
+                            </th>
+                            <th class="px-4 py-3 text-right font-medium">
+                                Markup
                             </th>
                             <th class="px-4 py-3 text-right font-medium">
                                 Pixelforge /v1/usage
@@ -214,6 +300,21 @@ function difference(day: DayRow): string {
                                 :title="`$${day.provider_cost}`"
                             >
                                 {{ formatUsdString(day.provider_cost) }}
+                            </td>
+                            <td
+                                class="px-4 py-3 text-right tabular-nums"
+                                :title="`$${day.profit}`"
+                            >
+                                {{ formatUsdString(day.profit) }}
+                            </td>
+                            <td class="px-4 py-3 text-right tabular-nums">
+                                {{
+                                    day.effective_markup_basis_points === null
+                                        ? '—'
+                                        : formatMarkup(
+                                              day.effective_markup_basis_points,
+                                          )
+                                }}
                             </td>
                             <td
                                 class="px-4 py-3 text-right tabular-nums"
@@ -253,8 +354,13 @@ function difference(day: DayRow): string {
             </div>
         </section>
 
-        <section class="flex flex-col gap-3">
-            <h2 class="text-lg font-semibold">Per user</h2>
+        <section
+            id="panel-users"
+            v-show="activeTab === 'users'"
+            role="tabpanel"
+            aria-labelledby="tab-users"
+            class="flex flex-col gap-3"
+        >
             <div
                 v-if="report.rows.length === 0"
                 class="rounded-xl border border-dashed p-12 text-center text-muted-foreground"
@@ -281,6 +387,9 @@ function difference(day: DayRow): string {
                             </th>
                             <th class="px-4 py-3 text-right font-medium">
                                 Profit
+                            </th>
+                            <th class="px-4 py-3 text-right font-medium">
+                                Markup
                             </th>
                         </tr>
                     </thead>
