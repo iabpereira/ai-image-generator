@@ -5,6 +5,7 @@ use App\Jobs\SubmitGeneration;
 use App\Models\Generation;
 use App\Models\User;
 use App\Services\Credits\CreditLedger;
+use App\Services\Pricing\Markup;
 use App\Support\Money;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -37,7 +38,7 @@ it('shows the generate form with pricing', function () {
         ->get(route('generations.create'))
         ->assertInertia(fn (Assert $page) => $page->component('generations/Create')
             ->where('pricing.rates.output_tokens', '40.00')
-            ->where('markupPercent', 25));
+            ->where('markupBasisPoints', 2500));
 });
 
 it('stores a pending generation with its estimate and queues submission', function () {
@@ -127,3 +128,18 @@ it('redirects the old generation URLs', function (string $uri, string $destinati
         ->get($uri)
         ->assertRedirect($destination);
 })->with([['/generations', '/dashboard'], ['/generations/create', '/generate']]);
+
+it('fixes the markup in force on the generation and quotes with it', function () {
+    $user = User::factory()->create();
+    app(CreditLedger::class)->purchase($user, Money::fromDollars(1));
+    app(Markup::class)->change(User::factory()->admin()->create(), 1000);
+
+    $this->actingAs($user)->post(route('generations.store'), [
+        'prompt' => str_repeat('a', 400), 'size' => '1536x1024', 'quality' => 'high',
+        'reference_images' => ['https://example.com/a.png', 'https://example.com/b.png'],
+    ]);
+
+    expect($user->generations()->sole())
+        ->markup_basis_points->toBe(1000)
+        ->maximum_charge->toDecimalString()->toBe('0.411262500');
+});

@@ -10,7 +10,7 @@ final readonly class CostCalculator
 {
     private const int TOKENS_PER_RATE_UNIT = 1_000_000;
 
-    public function __construct(private int $markupPercent) {}
+    private const int BASIS_POINTS = 10_000;
 
     /**
      * Typical uses the nominal text token count and mid-range reasoning; maximum uses
@@ -22,6 +22,7 @@ final readonly class CostCalculator
         GenerationSize $size,
         GenerationQuality $quality,
         int $referenceImageCount,
+        int $markupBasisPoints,
     ): CostEstimate {
         $nominalTextTokens = (int) ceil(mb_strlen($prompt) / $pricing->charactersPerTextToken);
         $maximumTextTokens = intdiv($nominalTextTokens * (100 + $pricing->textTokenVariancePercent) + 99, 100);
@@ -43,8 +44,8 @@ final readonly class CostCalculator
         ], $pricing->rates);
 
         return new CostEstimate(
-            typicalCharge: $this->charge($typicalProviderCost),
-            maximumCharge: $this->charge($maximumProviderCost),
+            typicalCharge: $this->charge($typicalProviderCost, $markupBasisPoints),
+            maximumCharge: $this->charge($maximumProviderCost, $markupBasisPoints),
             maximumProviderCost: $maximumProviderCost,
         );
     }
@@ -67,8 +68,12 @@ final readonly class CostCalculator
         return Money::fromNanos($nanoTokenRate)->multiplyRoundingUp(1, self::TOKENS_PER_RATE_UNIT);
     }
 
-    public function charge(Money $providerCost): Money
+    /**
+     * What the user pays: provider cost plus markup (2500 basis points = 25%),
+     * rounded up to the next nanodollar.
+     */
+    public function charge(Money $providerCost, int $markupBasisPoints): Money
     {
-        return $providerCost->multiplyRoundingUp(100 + $this->markupPercent, 100);
+        return $providerCost->multiplyRoundingUp(self::BASIS_POINTS + $markupBasisPoints, self::BASIS_POINTS);
     }
 }

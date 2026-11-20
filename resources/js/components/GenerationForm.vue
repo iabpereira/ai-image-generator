@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { decimalToNanos, formatUsd, formatUsdString } from '@/lib/money';
-import { codePointLength, estimateCharge } from '@/lib/pricing';
+import { codePointLength, estimateCharge, formatMarkup } from '@/lib/pricing';
 import { index as creditsIndex } from '@/routes/credits';
 import { store } from '@/routes/generations';
 import type {
@@ -27,7 +27,7 @@ import type {
 
 const props = defineProps<{
     pricing: Pricing | null;
-    markupPercent: number;
+    markupBasisPoints: number;
 }>();
 
 const MAX_PROMPT_LENGTH = 4000;
@@ -57,7 +57,7 @@ const estimate = computed(() =>
         ? null
         : estimateCharge(
               props.pricing,
-              props.markupPercent,
+              props.markupBasisPoints,
               form.prompt,
               form.size,
               form.quality,
@@ -268,8 +268,8 @@ function submit(): void {
                 </div>
                 <p class="text-muted-foreground">
                     The final price is Pixelforge's token cost plus
-                    {{ markupPercent }}%. Part of that cost is only known once
-                    the image is done.
+                    {{ formatMarkup(markupBasisPoints) }}. Part of that cost is
+                    only known once the image is done.
                 </p>
                 <p class="tabular-nums">
                     Your balance:

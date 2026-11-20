@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\MarkupController;
 use App\Http\Controllers\Admin\SpendReportController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CreditController;
@@ -21,6 +22,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('credits', CreditController::class)->only(['index', 'store']);
     Route::get('admin/spend-report', SpendReportController::class)->name('admin.spend-report');
     Route::get('admin/users', [UserController::class, 'index'])->name('admin.users.index');
+    Route::get('admin/markup', [MarkupController::class, 'index'])->name('admin.markup.index');
+    Route::post('admin/markup', [MarkupController::class, 'store'])->name('admin.markup.store');
     Route::post('admin/users/{user}/impersonate', [ImpersonationController::class, 'store'])->name('admin.impersonation.store');
     Route::delete('impersonation', [ImpersonationController::class, 'destroy'])->name('impersonation.destroy');
 

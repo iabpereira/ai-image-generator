@@ -6,6 +6,7 @@ import {
     FolderGit2,
     Images,
     LayoutGrid,
+    Percent,
     Sparkles,
     Users,
     Wallet,
@@ -27,6 +28,7 @@ import {
 import { dashboard } from '@/routes';
 import { spendReport } from '@/routes/admin';
 import { index as usersIndex } from '@/routes/admin/users';
+import { index as markupIndex } from '@/routes/admin/markup';
 import { index as creditsIndex } from '@/routes/credits';
 import { create, gallery } from '@/routes/generations';
 import { formatUsdString } from '@/lib/money';
@@ -67,6 +69,11 @@ const adminNavItems: NavItem[] = [
         title: 'Users',
         href: usersIndex(),
         icon: Users,
+    },
+    {
+        title: 'Markup',
+        href: markupIndex(),
+        icon: Percent,
     },
 ];
 
