@@ -36,6 +36,16 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, Notifiable;
 
     /**
+     * New accounts start with no credits (mirrors the column default, so fresh
+     * instances serialize the balance before being reloaded).
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'credit_balance' => 0,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

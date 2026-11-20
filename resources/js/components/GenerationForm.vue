@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { Plus, X } from '@lucide/vue';
 import { computed } from 'vue';
 import InputError from '@/components/InputError.vue';
@@ -15,8 +15,9 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import { formatUsd } from '@/lib/money';
+import { decimalToNanos, formatUsd, formatUsdString } from '@/lib/money';
 import { codePointLength, estimateCharge } from '@/lib/pricing';
+import { index as creditsIndex } from '@/routes/credits';
 import { store } from '@/routes/generations';
 import type {
     GenerationQuality,
@@ -64,9 +65,24 @@ const estimate = computed(() =>
           ),
 );
 
+const page = usePage();
+
+const balance = computed(() => page.props.auth.user.credit_balance);
+
+const cannotAfford = computed(
+    () =>
+        estimate.value !== null &&
+        decimalToNanos(balance.value) < estimate.value.maximum,
+);
+
 /** Server-side error when the price list could not be loaded on submit. */
 const pricingError = computed(
     () => (form.errors as Record<string, string | undefined>).pricing,
+);
+
+/** Server-side error when the balance can't cover the maximum price. */
+const creditsError = computed(
+    () => (form.errors as Record<string, string | undefined>).credits,
 );
 
 const referenceImageErrors = computed(() =>
@@ -200,8 +216,28 @@ function submit(): void {
             </div>
 
             <InputError :message="pricingError" />
+            <InputError :message="creditsError" />
 
-            <Button type="submit" :disabled="form.processing || !pricing">
+            <div
+                v-if="estimate && cannotAfford"
+                class="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+            >
+                <p>
+                    This image can cost up to {{ formatUsd(estimate.maximum) }},
+                    but your balance is {{ formatUsdString(balance) }}.
+                </p>
+                <Link
+                    :href="creditsIndex()"
+                    class="font-medium underline underline-offset-4"
+                >
+                    Buy credits
+                </Link>
+            </div>
+
+            <Button
+                type="submit"
+                :disabled="form.processing || !pricing || cannotAfford"
+            >
                 <Spinner v-if="form.processing" />
                 Generate
             </Button>
@@ -234,6 +270,12 @@ function submit(): void {
                     The final price is Pixelforge's token cost plus
                     {{ markupPercent }}%. Part of that cost is only known once
                     the image is done.
+                </p>
+                <p class="tabular-nums">
+                    Your balance:
+                    <span class="font-medium">
+                        {{ formatUsdString(balance) }}
+                    </span>
                 </p>
                 <p class="font-medium">
                     You're only charged if the image succeeds.

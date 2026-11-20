@@ -32,7 +32,7 @@ it('shows the balance, packs and statement', function () {
     $user = User::factory()->create();
     app(CreditLedger::class)->purchase($user, Money::fromDollars(1));
 
-    $this->actingAs($user)->get(route('credits.index'))
+    $this->actingAs($user->refresh())->get(route('credits.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('credits/Index')
             ->where('auth.user.credit_balance', '1.000000000')
