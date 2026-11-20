@@ -14,8 +14,11 @@ beforeEach(function () {
     seedPixelforgePricing();
 });
 
-it('requires authentication', function () {
-    $this->get(route('dashboard'))->assertRedirect(route('login'));
+it('requires authentication', function (string $routeName) {
+    $this->get(route($routeName))->assertRedirect(route('login'));
+})->with(['dashboard', 'generations.create', 'generations.gallery']);
+
+it('requires authentication to generate', function () {
     $this->post(route('generations.store'))->assertRedirect(route('login'));
 });
 
@@ -27,19 +30,13 @@ it('requires a verified email to generate', function () {
     Queue::assertNothingPushed();
 });
 
-it('shows the generate form with pricing on the dashboard', function () {
+it('shows the generate form with pricing', function () {
     $this->actingAs(User::factory()->create())
-        ->get(route('dashboard'))
-        ->assertInertia(fn (Assert $page) => $page->component('Dashboard')
+        ->get(route('generations.create'))
+        ->assertInertia(fn (Assert $page) => $page->component('generations/Create')
             ->where('pricing.rates.output_tokens', '40.00')
             ->where('markupPercent', 25));
 });
-
-it('redirects the old generation pages to the dashboard', function (string $uri) {
-    $this->actingAs(User::factory()->create())
-        ->get($uri)
-        ->assertRedirect('/dashboard');
-})->with(['/generations', '/generations/create']);
 
 it('stores a pending generation with its estimate and queues submission', function () {
     $user = User::factory()->create();
@@ -86,14 +83,14 @@ it('lists only the current user generations, newest first', function () {
             ->where('generations.data.1.charged_amount', '0.381887500'));
 });
 
-it('still shows the dashboard when pricing is unavailable', function () {
+it('still shows the generate page when pricing is unavailable', function () {
     Cache::forget('pixelforge.pricing');
     Http::fake(['*/pricing' => Http::response(['error' => ['code' => 'overloaded', 'message' => 'busy']], 503)]);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('dashboard'))
+        ->get(route('generations.create'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->component('Dashboard')->where('pricing', null));
+        ->assertInertia(fn (Assert $page) => $page->component('generations/Create')->where('pricing', null));
 });
 
 it('explains that generating is unavailable when pricing cannot be loaded', function () {
@@ -107,4 +104,17 @@ it('explains that generating is unavailable when pricing cannot be loaded', func
 
     expect($user->generations()->count())->toBe(0);
     Queue::assertNothingPushed();
+});
+
+it('shows only the current user succeeded images in the gallery', function () {
+    $user = User::factory()->create();
+    $image = Generation::factory()->for($user)->succeeded()->create();
+    Generation::factory()->for($user)->failed()->create();
+    Generation::factory()->for($user)->processing()->create();
+    Generation::factory()->succeeded()->create();
+
+    $this->actingAs($user)->get(route('generations.gallery'))
+        ->assertInertia(fn (Assert $page) => $page->component('generations/Gallery')
+            ->has('generations.data', 1)
+            ->where('generations.data.0.id', $image->id));
 });
