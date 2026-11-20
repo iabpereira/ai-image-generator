@@ -1,7 +1,7 @@
-# Uso no servidor (a imagem é gerada no Mac pelo deploy.sh):
+# Usage on the server (the image is built locally by deploy.sh):
 #   docker compose --env-file deploy.env up -d --no-build
-# deploy.env define APP_DOMAIN, TRAEFIK_NETWORK, TRAEFIK_ENTRYPOINT e TRAEFIK_CERTRESOLVER.
-# As variáveis do Laravel ficam em .env.production (nunca vão para a imagem).
+# deploy.env defines APP_DOMAIN, TRAEFIK_NETWORK, TRAEFIK_ENTRYPOINT and TRAEFIK_CERTRESOLVER.
+# Laravel settings live in .env.production (never baked into the image).
 
 services:
     web:

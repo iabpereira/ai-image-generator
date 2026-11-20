@@ -8,39 +8,38 @@ import { dashboard, home, login, register } from '@/routes';
 const features = [
     {
         icon: WandSparkles,
-        title: 'Do texto à imagem',
+        title: 'From text to image',
         description:
-            'Descreva o que você imagina e receba imagens prontas em segundos.',
+            'Describe what you have in mind and get finished images in seconds.',
     },
     {
         icon: Layers,
-        title: 'Variações rápidas',
+        title: 'Quick variations',
         description:
-            'Ajuste o prompt e compare versões lado a lado até chegar no resultado.',
+            'Tweak the prompt and compare versions side by side until it looks right.',
     },
     {
         icon: Download,
-        title: 'Tudo salvo',
-        description:
-            'Suas criações ficam guardadas na sua conta, prontas para baixar.',
+        title: 'Everything saved',
+        description: 'Your creations stay in your account, ready to download.',
     },
 ];
 
 const samples = [
     {
-        prompt: 'farol ao entardecer, aquarela',
+        prompt: 'lighthouse at dusk, watercolor',
         gradient: 'from-amber-300 via-orange-400 to-rose-500',
     },
     {
-        prompt: 'floresta nebulosa, luz suave',
+        prompt: 'misty forest, soft light',
         gradient: 'from-emerald-300 via-teal-500 to-cyan-700',
     },
     {
-        prompt: 'cidade neon sob chuva',
+        prompt: 'neon city in the rain',
         gradient: 'from-fuchsia-500 via-violet-600 to-indigo-800',
     },
     {
-        prompt: 'deserto minimalista, dunas',
+        prompt: 'minimalist desert dunes',
         gradient: 'from-yellow-200 via-amber-400 to-orange-600',
     },
 ];
@@ -48,7 +47,7 @@ const samples = [
 
 <template>
     <div class="min-h-screen bg-background text-foreground">
-        <Head title="Crie imagens com IA" />
+        <Head title="Create images with AI" />
 
         <header
             class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5"
@@ -59,14 +58,14 @@ const samples = [
 
             <nav class="flex items-center gap-2">
                 <Button v-if="$page.props.auth.user" as-child>
-                    <Link :href="dashboard()">Abrir painel</Link>
+                    <Link :href="dashboard()">Open dashboard</Link>
                 </Button>
                 <template v-else>
                     <Button variant="ghost" as-child>
-                        <Link :href="login()">Entrar</Link>
+                        <Link :href="login()">Log in</Link>
                     </Button>
                     <Button as-child>
-                        <Link :href="register()">Criar conta</Link>
+                        <Link :href="register()">Sign up</Link>
                     </Button>
                 </template>
             </nav>
@@ -81,32 +80,32 @@ const samples = [
                         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground"
                     >
                         <Sparkles class="size-3.5" />
-                        Geração de imagens com inteligência artificial
+                        AI-powered image generation
                     </span>
 
                     <h1
                         class="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
                     >
-                        Transforme ideias em imagens.
+                        Turn ideas into images.
                     </h1>
 
                     <p
                         class="mt-4 max-w-lg text-lg text-pretty text-muted-foreground"
                     >
-                        Escreva uma descrição, escolha o estilo e deixe a IA
-                        fazer o resto. Simples assim.
+                        Write a description, pick a style and let the AI do the
+                        rest. That simple.
                     </p>
 
                     <div class="mt-8 flex flex-wrap gap-3">
                         <Button v-if="$page.props.auth.user" size="lg" as-child>
-                            <Link :href="dashboard()">Começar a criar</Link>
+                            <Link :href="dashboard()">Start creating</Link>
                         </Button>
                         <template v-else>
                             <Button size="lg" as-child>
-                                <Link :href="register()">Começar grátis</Link>
+                                <Link :href="register()">Get started</Link>
                             </Button>
                             <Button size="lg" variant="outline" as-child>
-                                <Link :href="login()">Já tenho conta</Link>
+                                <Link :href="login()">I have an account</Link>
                             </Button>
                         </template>
                     </div>
