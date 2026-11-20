@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, usePage, usePoll } from '@inertiajs/vue3';
 import { ImageIcon, Sparkles } from '@lucide/vue';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import GenerationStatusBadge from '@/components/GenerationStatusBadge.vue';
+import ImageViewerDialog from '@/components/ImageViewerDialog.vue';
 import { Button } from '@/components/ui/button';
 import { decimalToNanos, formatUsdString } from '@/lib/money';
 import { dashboard } from '@/routes';
@@ -17,6 +18,14 @@ defineOptions({
         breadcrumbs: [{ title: 'Dashboard', href: dashboard() }],
     },
 });
+
+const selected = ref<Generation | null>(null);
+const open = ref(false);
+
+function viewGeneration(generation: Generation): void {
+    selected.value = generation;
+    open.value = true;
+}
 
 const page = usePage();
 
@@ -113,11 +122,12 @@ function referenceImagesLabel(count: number): string {
                         class="border-t border-sidebar-border/70 align-top dark:border-sidebar-border"
                     >
                         <td class="px-4 py-3">
-                            <a
+                            <button
                                 v-if="generation.image_src"
-                                :href="generation.image_src"
-                                target="_blank"
-                                rel="noopener"
+                                type="button"
+                                class="cursor-zoom-in"
+                                aria-label="View image"
+                                @click="viewGeneration(generation)"
                             >
                                 <img
                                     :src="generation.image_src"
@@ -125,7 +135,7 @@ function referenceImagesLabel(count: number): string {
                                     loading="lazy"
                                     class="size-12 rounded-md object-cover"
                                 />
-                            </a>
+                            </button>
                             <div
                                 v-else
                                 class="flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground"
@@ -229,5 +239,7 @@ function referenceImagesLabel(count: number): string {
             </Button>
             <Button v-else variant="outline" size="sm" disabled>Next</Button>
         </nav>
+
+        <ImageViewerDialog v-model:open="open" :generation="selected" />
     </div>
 </template>

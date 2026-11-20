@@ -32,6 +32,7 @@ export type Generation = {
     maximum_charge: string;
     charged_amount: string | null;
     image_src: string | null;
+    image_download_url: string | null;
     image_expired: boolean;
     error_message: string | null;
     created_at: string;
