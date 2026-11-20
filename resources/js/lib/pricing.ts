@@ -13,6 +13,21 @@ export function codePointLength(text: string): number {
     return Array.from(text).length;
 }
 
+/** Formats basis points as a percentage, e.g. 2500 -> "25%" and 1250 -> "12.5%". */
+export function formatMarkup(basisPoints: number): string {
+    const whole = Math.trunc(basisPoints / 100);
+    const hundredths = Math.abs(basisPoints % 100);
+
+    if (hundredths === 0) {
+        return `${whole}%`;
+    }
+
+    const fraction = String(hundredths).padStart(2, '0').replace(/0$/, '');
+    const sign = basisPoints < 0 && whole === 0 ? '-' : '';
+
+    return `${sign}${whole}.${fraction}%`;
+}
+
 function providerCostNanos(tokens: Tokens, pricing: Pricing): number {
     const nanoTokenRate = (Object.keys(pricing.rates) as TokenKind[]).reduce(
         (sum, kind) => sum + tokens[kind] * decimalToNanos(pricing.rates[kind]),
@@ -22,8 +37,8 @@ function providerCostNanos(tokens: Tokens, pricing: Pricing): number {
     return Math.ceil(nanoTokenRate / 1_000_000);
 }
 
-function charge(providerNanos: number, markupPercent: number): number {
-    return Math.ceil((providerNanos * (100 + markupPercent)) / 100);
+function charge(providerNanos: number, markupBasisPoints: number): number {
+    return Math.ceil((providerNanos * (10_000 + markupBasisPoints)) / 10_000);
 }
 
 /**
@@ -32,7 +47,7 @@ function charge(providerNanos: number, markupPercent: number): number {
  */
 export function estimateCharge(
     pricing: Pricing,
-    markupPercent: number,
+    markupBasisPoints: number,
     prompt: string,
     size: GenerationSize,
     quality: GenerationQuality,
@@ -63,7 +78,7 @@ export function estimateCharge(
                 },
                 pricing,
             ),
-            markupPercent,
+            markupBasisPoints,
         ),
         maximum: charge(
             providerCostNanos(
@@ -74,7 +89,7 @@ export function estimateCharge(
                 },
                 pricing,
             ),
-            markupPercent,
+            markupBasisPoints,
         ),
     };
 }

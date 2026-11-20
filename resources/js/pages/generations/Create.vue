@@ -4,7 +4,7 @@ import GenerationForm from '@/components/GenerationForm.vue';
 import { create } from '@/routes/generations';
 import type { Pricing } from '@/types/generation';
 
-defineProps<{ pricing: Pricing | null; markupPercent: number }>();
+defineProps<{ pricing: Pricing | null; markupBasisPoints: number }>();
 
 defineOptions({
     layout: {
@@ -25,6 +25,9 @@ defineOptions({
             </p>
         </div>
 
-        <GenerationForm :pricing="pricing" :markup-percent="markupPercent" />
+        <GenerationForm
+            :pricing="pricing"
+            :markup-basis-points="markupBasisPoints"
+        />
     </div>
 </template>
