@@ -107,3 +107,12 @@ it('acknowledges ping events', function () {
     sendWebhook(['id' => 'evt_ping', 'object' => 'event', 'type' => 'ping', 'created_at' => now()->toIso8601String(), 'data' => []])
         ->assertOk();
 });
+
+it('runs outside the web middleware group, without a session or cookies', function () {
+    $generation = Generation::factory()->processing()->create();
+
+    sendWebhook(generationEvent($generation, 'processing'))
+        ->assertOk()
+        ->assertCookieMissing(config('session.cookie'))
+        ->assertCookieMissing('XSRF-TOKEN');
+});
