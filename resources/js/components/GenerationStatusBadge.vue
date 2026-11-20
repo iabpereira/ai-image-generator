@@ -4,7 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import type { GenerationStatus } from '@/types/generation';
 
-const props = defineProps<{ status: GenerationStatus }>();
+const props = defineProps<{
+    status: GenerationStatus;
+    /** Show the hint as a tooltip instead of inline text (e.g. in table rows). */
+    compact?: boolean;
+}>();
 
 const presentation = computed(
     () =>
@@ -48,6 +52,7 @@ const current = computed(() => presentation.value[props.status]);
 <template>
     <div class="flex items-center gap-2">
         <Badge
+            :title="compact ? (current.hint ?? undefined) : undefined"
             :variant="current.variant"
             :class="
                 status === 'succeeded'
@@ -58,7 +63,10 @@ const current = computed(() => presentation.value[props.status]);
             <Spinner v-if="current.busy" class="size-3" />
             {{ current.label }}
         </Badge>
-        <span v-if="current.hint" class="text-xs text-muted-foreground">
+        <span
+            v-if="current.hint && !compact"
+            class="text-xs text-muted-foreground"
+        >
             {{ current.hint }}
         </span>
     </div>

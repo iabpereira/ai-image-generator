@@ -81,10 +81,6 @@ const createdAt = computed(() =>
                     >
                         {{ formatUsdString(generation.charged_amount) }}
                     </span>
-                    <span class="ml-1 text-xs text-muted-foreground">
-                        (est.
-                        {{ formatUsdString(generation.estimated_charge) }})
-                    </span>
                 </div>
                 <div v-else>
                     <span class="text-muted-foreground">Estimated</span>
