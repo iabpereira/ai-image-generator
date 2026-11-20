@@ -56,7 +56,12 @@ const createdAt = computed(() =>
         </div>
 
         <div class="flex flex-1 flex-col gap-3 p-4">
-            <GenerationStatusBadge :status="generation.status" />
+            <div class="flex items-center justify-between gap-2">
+                <GenerationStatusBadge :status="generation.status" />
+                <span class="text-xs text-muted-foreground tabular-nums">
+                    #{{ generation.id }}
+                </span>
+            </div>
 
             <p
                 class="line-clamp-2 text-sm [overflow-wrap:anywhere]"

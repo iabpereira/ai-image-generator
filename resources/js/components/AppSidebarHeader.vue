@@ -26,7 +26,7 @@ function stopImpersonating(): void {
 <template>
     <div
         v-if="page.props.auth.impersonator"
-        class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-amber-500/50 bg-amber-500 px-4 py-1.5 text-sm font-medium text-amber-950"
+        class="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-amber-500/50 bg-amber-500 px-4 py-1.5 text-sm font-medium text-amber-950 shadow-sm"
         role="status"
     >
         <UserRoundCog class="size-4 shrink-0" />
