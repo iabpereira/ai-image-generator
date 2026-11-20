@@ -8,6 +8,8 @@ import type { Generation } from '@/types/generation';
 
 const props = defineProps<{ generation: Generation }>();
 
+const emit = defineEmits<{ view: [generation: Generation] }>();
+
 const createdAt = computed(() =>
     new Date(props.generation.created_at).toLocaleString(undefined, {
         dateStyle: 'medium',
@@ -21,13 +23,13 @@ const createdAt = computed(() =>
         class="flex flex-col overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
     >
         <div class="relative aspect-square w-full overflow-hidden bg-muted">
-            <a
+            <button
                 v-if="generation.image_src"
-                :href="generation.image_src"
-                target="_blank"
-                rel="noopener"
-                class="block size-full"
-                :title="`Open full image (${generation.size})`"
+                type="button"
+                class="block size-full cursor-zoom-in"
+                aria-label="View image"
+                :title="`View image (${generation.size})`"
+                @click="emit('view', generation)"
             >
                 <img
                     :src="generation.image_src"
@@ -35,7 +37,7 @@ const createdAt = computed(() =>
                     loading="lazy"
                     class="size-full object-cover transition-transform hover:scale-105"
                 />
-            </a>
+            </button>
             <div
                 v-else-if="generation.status === 'failed'"
                 class="flex size-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"

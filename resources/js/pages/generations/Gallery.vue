@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { ImagePlus } from '@lucide/vue';
+import { ref } from 'vue';
 import GenerationCard from '@/components/GenerationCard.vue';
+import ImageViewerDialog from '@/components/ImageViewerDialog.vue';
 import { Button } from '@/components/ui/button';
 import { create, gallery } from '@/routes/generations';
 import type { Generation, Paginated } from '@/types/generation';
 
 defineProps<{ generations: Paginated<Generation> }>();
+
+const selected = ref<Generation | null>(null);
+const open = ref(false);
+
+function viewGeneration(generation: Generation): void {
+    selected.value = generation;
+    open.value = true;
+}
 
 defineOptions({
     layout: {
@@ -45,6 +55,7 @@ defineOptions({
                 v-for="generation in generations.data"
                 :key="generation.id"
                 :generation="generation"
+                @view="viewGeneration"
             />
         </div>
 
@@ -77,5 +88,7 @@ defineOptions({
             </Button>
             <Button v-else variant="outline" size="sm" disabled>Next</Button>
         </nav>
+
+        <ImageViewerDialog v-model:open="open" :generation="selected" />
     </div>
 </template>

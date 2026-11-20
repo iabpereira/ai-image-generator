@@ -9,11 +9,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Pixelforge image URLs expire 24 h after completion, so keep our own copy.
+ * Pixelforge image URLs expire 24 h after completion, so keep our own copy on a
+ * private disk; GenerationImageController serves it to the owner only.
  */
 class StoreGenerationImage implements ShouldQueue
 {
     use Queueable;
+
+    public const string DISK = 'local';
 
     public int $tries = 3;
 
@@ -33,7 +36,7 @@ class StoreGenerationImage implements ShouldQueue
         $image = Http::timeout(30)->get($generation->image_url)->throw()->body();
         $path = "generations/{$generation->uuid}.png";
 
-        Storage::disk('public')->put($path, $image);
+        Storage::disk(self::DISK)->put($path, $image);
         $generation->update(['image_path' => $path]);
     }
 }

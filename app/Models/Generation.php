@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Status, provider id, provider cost and charge are deliberately not fillable: only
@@ -133,7 +132,8 @@ class Generation extends Model
     }
 
     /**
-     * Our stored copy wins; otherwise Pixelforge's signed URL while it is still valid.
+     * Our stored copy (served to the owner by GenerationImageController) wins;
+     * otherwise Pixelforge's signed URL while it is still valid.
      *
      * @return Attribute<string|null, never>
      */
@@ -141,7 +141,7 @@ class Generation extends Model
     {
         return Attribute::get(function (): ?string {
             if ($this->image_path !== null) {
-                return Storage::disk('public')->url($this->image_path);
+                return route('generations.image', $this);
             }
 
             if ($this->image_url !== null && $this->image_url_expires_at?->isFuture()) {
