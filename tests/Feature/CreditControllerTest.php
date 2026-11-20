@@ -38,5 +38,7 @@ it('shows the balance, packs and statement', function () {
             ->where('auth.user.credit_balance', '1.000000000')
             ->where('packs', [1, 5, 20])
             ->where('transactions.data.0.type', 'purchase')
-            ->where('transactions.data.0.amount', '1.000000000'));
+            ->where('transactions.data.0.amount', '1.000000000')
+            ->where('transactions.meta.last_page', 1)
+            ->where('transactions.links.prev', null));
 });

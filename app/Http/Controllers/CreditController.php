@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PurchaseCreditsRequest;
-use App\Models\CreditTransaction;
+use App\Http\Resources\CreditTransactionResource;
 use App\Services\Credits\CreditLedger;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
@@ -23,15 +23,8 @@ class CreditController extends Controller
     {
         return Inertia::render('credits/Index', [
             'packs' => self::PACKS,
-            'transactions' => $request->user()->creditTransactions()->latest('id')->paginate(20)->through(
-                fn (CreditTransaction $transaction): array => [
-                    'id' => $transaction->id,
-                    'type' => $transaction->type->value,
-                    'amount' => $transaction->amount->toDecimalString(),
-                    'balance_after' => $transaction->balance_after->toDecimalString(),
-                    'generation_id' => $transaction->generation_id,
-                    'created_at' => $transaction->created_at->toIso8601String(),
-                ],
+            'transactions' => CreditTransactionResource::collection(
+                $request->user()->creditTransactions()->latest('id')->paginate(20),
             ),
         ]);
     }
