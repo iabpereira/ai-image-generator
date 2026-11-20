@@ -1,0 +1,39 @@
+# Uso no servidor (a imagem é gerada no Mac pelo deploy.sh):
+#   docker compose --env-file deploy.env up -d --no-build
+# deploy.env define APP_DOMAIN, TRAEFIK_NETWORK, TRAEFIK_ENTRYPOINT e TRAEFIK_CERTRESOLVER.
+# As variáveis do Laravel ficam em .env.production (nunca vão para a imagem).
+
+services:
+  web:
+    image: ai-image-generator:latest
+    container_name: ai-image-generator
+    restart: unless-stopped
+    env_file: .env.production
+    mem_limit: 256m
+    volumes:
+      - data:/app/database/data
+      - storage:/app/storage/app
+    networks: [traefik]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK}
+      - traefik.http.routers.ai-image.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.ai-image.entrypoints=${TRAEFIK_ENTRYPOINT:-https}
+      - traefik.http.routers.ai-image.tls=true
+      - traefik.http.routers.ai-image.tls.certresolver=${TRAEFIK_CERTRESOLVER:-cloudflare}
+      - traefik.http.services.ai-image.loadbalancer.server.port=80
+
+volumes:
+  data:
+  storage:
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK}
