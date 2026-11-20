@@ -28,7 +28,8 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                     {{ generation.prompt }}
                 </DialogTitle>
                 <DialogDescription>
-                    {{ generation.size }} · {{ generation.quality }} quality
+                    #{{ generation.id }} · {{ generation.size }} ·
+                    {{ generation.quality }} quality
                     <template v-if="generation.charged_amount !== null">
                         · {{ formatUsdString(generation.charged_amount) }}
                     </template>

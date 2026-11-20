@@ -107,6 +107,7 @@ function referenceImagesLabel(count: number): string {
             <table class="w-full text-sm">
                 <thead class="bg-muted/50 text-left text-muted-foreground">
                     <tr>
+                        <th class="px-4 py-3 font-medium">#</th>
                         <th class="px-4 py-3 font-medium">Image</th>
                         <th class="px-4 py-3 font-medium">Prompt</th>
                         <th class="px-4 py-3 font-medium">Options</th>
@@ -121,6 +122,11 @@ function referenceImagesLabel(count: number): string {
                         :key="generation.id"
                         class="border-t border-sidebar-border/70 align-top dark:border-sidebar-border"
                     >
+                        <td
+                            class="px-4 py-3 text-muted-foreground tabular-nums"
+                        >
+                            #{{ generation.id }}
+                        </td>
                         <td class="px-4 py-3">
                             <button
                                 v-if="generation.image_src"
