@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Services\Pixelforge\CostCalculator;
 use App\Services\Pixelforge\PixelforgeClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -33,6 +35,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Pixelforge allows 60 requests/minute per account; keep headroom for polling and the local key.
+        RateLimiter::for('pixelforge', fn (): Limit => Limit::perMinute(50));
     }
 
     /**
