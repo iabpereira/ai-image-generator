@@ -5,6 +5,7 @@ namespace App\Services\Generations;
 use App\Enums\GenerationStatus;
 use App\Jobs\StoreGenerationImage;
 use App\Models\Generation;
+use App\Services\Credits\CreditLedger;
 use App\Services\Pixelforge\CostCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,7 +27,7 @@ final readonly class GenerationLifecycle
      */
     private const array UNCERTAIN_SUBMISSION_FAILURES = ['submission_failed', 'submission_timeout'];
 
-    public function __construct(private CostCalculator $costs) {}
+    public function __construct(private CostCalculator $costs, private CreditLedger $credits) {}
 
     /**
      * Move a generation to the state described by a Pixelforge generation object.
@@ -68,15 +69,21 @@ final readonly class GenerationLifecycle
      */
     public function failSubmission(Generation $generation, string $errorCode, string $message): bool
     {
-        $updated = Generation::query()
-            ->whereKey($generation->getKey())
-            ->where('status', GenerationStatus::Pending->value)
-            ->whereNull('provider_id')
-            ->update(['status' => GenerationStatus::Failed->value, ...$this->localFailure($errorCode, $message)]);
+        return DB::transaction(function () use ($generation, $errorCode, $message): bool {
+            $updated = Generation::query()
+                ->whereKey($generation->getKey())
+                ->where('status', GenerationStatus::Pending->value)
+                ->whereNull('provider_id')
+                ->update(['status' => GenerationStatus::Failed->value, ...$this->localFailure($errorCode, $message)]);
 
-        $generation->refresh();
+            $generation->refresh();
 
-        return $updated === 1;
+            if ($updated === 1) {
+                $this->afterTransition($generation, GenerationStatus::Failed);
+            }
+
+            return $updated === 1;
+        });
     }
 
     /**
@@ -195,7 +202,12 @@ final readonly class GenerationLifecycle
     private function afterTransition(Generation $generation, GenerationStatus $target): void
     {
         if ($target === GenerationStatus::Succeeded) {
+            $this->credits->settle($generation);
             StoreGenerationImage::dispatch($generation)->afterCommit();
+        }
+
+        if ($target === GenerationStatus::Failed) {
+            $this->credits->release($generation);
         }
     }
 

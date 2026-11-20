@@ -4,6 +4,8 @@ use App\Enums\GenerationStatus;
 use App\Jobs\SubmitGeneration;
 use App\Models\Generation;
 use App\Models\User;
+use App\Services\Credits\CreditLedger;
+use App\Support\Money;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -40,6 +42,7 @@ it('shows the generate form with pricing', function () {
 
 it('stores a pending generation with its estimate and queues submission', function () {
     $user = User::factory()->create();
+    app(CreditLedger::class)->purchase($user, Money::fromDollars(1));
 
     $this->actingAs($user)->post(route('generations.store'), [
         'prompt' => str_repeat('a', 400),

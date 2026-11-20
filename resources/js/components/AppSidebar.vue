@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpen,
     FolderGit2,
     Images,
     LayoutGrid,
     Sparkles,
+    Wallet,
 } from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -21,10 +23,14 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as creditsIndex } from '@/routes/credits';
 import { create, gallery } from '@/routes/generations';
+import { formatUsdString } from '@/lib/money';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const page = usePage();
+
+const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Dashboard',
         href: dashboard(),
@@ -40,7 +46,12 @@ const mainNavItems: NavItem[] = [
         href: gallery(),
         icon: Images,
     },
-];
+    {
+        title: `Credits · ${formatUsdString(page.props.auth.user.credit_balance)}`,
+        href: creditsIndex(),
+        icon: Wallet,
+    },
+]);
 
 const footerNavItems: NavItem[] = [
     {

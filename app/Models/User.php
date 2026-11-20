@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
+use App\Support\Money;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Money $credit_balance
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -31,6 +34,16 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * New accounts start with no credits (mirrors the column default, so fresh
+     * instances serialize the balance before being reloaded).
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'credit_balance' => 0,
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -42,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'credit_balance' => MoneyCast::class,
         ];
     }
 
@@ -51,5 +65,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function generations(): HasMany
     {
         return $this->hasMany(Generation::class);
+    }
+
+    /**
+     * @return HasMany<CreditTransaction, $this>
+     */
+    public function creditTransactions(): HasMany
+    {
+        return $this->hasMany(CreditTransaction::class);
     }
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, usePoll } from '@inertiajs/vue3';
+import { Head, Link, usePage, usePoll } from '@inertiajs/vue3';
 import { ImageIcon, Sparkles } from '@lucide/vue';
 import { computed, watch } from 'vue';
 import GenerationStatusBadge from '@/components/GenerationStatusBadge.vue';
 import { Button } from '@/components/ui/button';
-import { formatUsdString } from '@/lib/money';
+import { decimalToNanos, formatUsdString } from '@/lib/money';
 import { dashboard } from '@/routes';
+import { index as creditsIndex } from '@/routes/credits';
 import { create } from '@/routes/generations';
 import type { Generation, Paginated } from '@/types/generation';
 
@@ -16,6 +17,12 @@ defineOptions({
         breadcrumbs: [{ title: 'Dashboard', href: dashboard() }],
     },
 });
+
+const page = usePage();
+
+const hasNoCredits = computed(
+    () => decimalToNanos(page.props.auth.user.credit_balance) === 0,
+);
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -61,6 +68,16 @@ function referenceImagesLabel(count: number): string {
             </div>
             <Button as-child>
                 <Link :href="create()"><Sparkles /> New image</Link>
+            </Button>
+        </div>
+
+        <div
+            v-if="hasNoCredits"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm"
+        >
+            <p>You have no credits yet.</p>
+            <Button as-child size="sm">
+                <Link :href="creditsIndex()">Buy credits</Link>
             </Button>
         </div>
 
