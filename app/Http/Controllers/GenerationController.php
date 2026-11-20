@@ -7,10 +7,15 @@ use App\Enums\GenerationSize;
 use App\Http\Requests\StoreGenerationRequest;
 use App\Http\Resources\GenerationResource;
 use App\Jobs\SubmitGeneration;
+use App\Models\Generation;
+use App\Services\Credits\CreditLedger;
+use App\Services\Credits\InsufficientCredits;
 use App\Services\Pixelforge\CostCalculator;
 use App\Services\Pixelforge\PixelforgeClient;
+use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -43,9 +48,10 @@ class GenerationController extends Controller
     }
 
     /**
-     * Record the generation with its server-side estimate and queue the submission.
+     * Record the generation with its server-side estimate, reserve its worst-case price
+     * from the user's credits, and queue the submission.
      */
-    public function store(StoreGenerationRequest $request, PixelforgeClient $client, CostCalculator $costs): RedirectResponse
+    public function store(StoreGenerationRequest $request, PixelforgeClient $client, CostCalculator $costs, CreditLedger $credits): RedirectResponse
     {
         $prompt = $request->validated('prompt');
         $size = GenerationSize::from($request->validated('size'));
@@ -58,20 +64,43 @@ class GenerationController extends Controller
 
         $estimate = $costs->estimate($pricing, $prompt, $size, $quality, count($referenceImages));
 
-        $generation = $request->user()->generations()->create([
-            'uuid' => (string) Str::uuid7(),
-            'prompt' => $prompt,
-            'size' => $size,
-            'quality' => $quality,
-            'reference_images' => $referenceImages,
-            'estimated_charge' => $estimate->typicalCharge,
-            'maximum_charge' => $estimate->maximumCharge,
-        ]);
+        try {
+            $generation = DB::transaction(function () use ($request, $credits, $prompt, $size, $quality, $referenceImages, $estimate): Generation {
+                $generation = $request->user()->generations()->create([
+                    'uuid' => (string) Str::uuid7(),
+                    'prompt' => $prompt,
+                    'size' => $size,
+                    'quality' => $quality,
+                    'reference_images' => $referenceImages,
+                    'estimated_charge' => $estimate->typicalCharge,
+                    'maximum_charge' => $estimate->maximumCharge,
+                ]);
+
+                $credits->hold($generation);
+
+                return $generation;
+            });
+        } catch (InsufficientCredits $exception) {
+            throw ValidationException::withMessages([
+                'credits' => __('This image can cost up to :required, but your balance is :available. Buy credits to continue.', [
+                    'required' => $this->formatUsd($exception->required),
+                    'available' => $this->formatUsd($exception->available),
+                ]),
+            ]);
+        }
 
         SubmitGeneration::dispatch($generation);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Generation queued.')]);
 
         return to_route('dashboard');
+    }
+
+    /**
+     * Display only (4 decimals, like the UI); never used for arithmetic.
+     */
+    private function formatUsd(Money $amount): string
+    {
+        return '$'.number_format($amount->nanos / Money::NANOS_PER_DOLLAR, 4);
     }
 }
