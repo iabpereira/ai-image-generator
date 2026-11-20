@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\GenerationController;
+use App\Http\Controllers\PixelforgeWebhookController;
+use App\Http\Middleware\VerifyPixelforgeSignature;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -12,5 +14,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::resource('generations', GenerationController::class)->only(['index', 'create', 'store']);
 });
+
+Route::post('webhooks/pixelforge', PixelforgeWebhookController::class)
+    ->middleware(VerifyPixelforgeSignature::class)
+    ->name('webhooks.pixelforge');
 
 require __DIR__.'/settings.php';
