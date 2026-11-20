@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\User;
-use App\Services\Pixelforge\CostCalculator;
 use App\Services\Pixelforge\PixelforgeClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -21,10 +20,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(CostCalculator::class, fn (): CostCalculator => new CostCalculator(
-            (int) config('services.pixelforge.markup_percent'),
-        ));
-
         $this->app->bind(PixelforgeClient::class, fn (): PixelforgeClient => new PixelforgeClient(
             (string) config('services.pixelforge.base_url'),
             (string) config('services.pixelforge.api_key'),
@@ -41,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('viewAdminReport', fn (User $user): bool => $user->is_admin);
         Gate::define('manageUsers', fn (User $user): bool => $user->is_admin);
+        Gate::define('managePricing', fn (User $user): bool => $user->is_admin);
         Gate::define('impersonate', fn (User $admin, User $user): bool => $admin->is_admin
             && ! $user->is_admin
             && ! $admin->is($user));

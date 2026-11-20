@@ -50,7 +50,7 @@ final readonly class GenerationLifecycle
         return $this->transition(
             $generation,
             $target,
-            $this->attributesFor($snapshot, $target),
+            $this->attributesFor($generation, $snapshot, $target),
             allowRecovery: true,
         );
     }
@@ -106,7 +106,7 @@ final readonly class GenerationLifecycle
      * @param  array<string, mixed>  $snapshot
      * @return array<string, mixed>
      */
-    private function attributesFor(array $snapshot, GenerationStatus $target): array
+    private function attributesFor(Generation $generation, array $snapshot, GenerationStatus $target): array
     {
         $attributes = array_filter([
             'provider_id' => $snapshot['id'],
@@ -116,7 +116,7 @@ final readonly class GenerationLifecycle
         ], fn (mixed $value): bool => $value !== null);
 
         return match ($target) {
-            GenerationStatus::Succeeded => [...$attributes, ...$this->successAttributes($snapshot)],
+            GenerationStatus::Succeeded => [...$attributes, ...$this->successAttributes($generation, $snapshot)],
             GenerationStatus::Failed => [
                 ...$attributes,
                 'provider_cost' => 0,
@@ -129,17 +129,20 @@ final readonly class GenerationLifecycle
     }
 
     /**
+     * The charge uses the markup fixed on the generation when it was created, never
+     * the current one, so a markup change can't alter what the user agreed to.
+     *
      * @param  array<string, mixed>  $snapshot
      * @return array<string, mixed>
      */
-    private function successAttributes(array $snapshot): array
+    private function successAttributes(Generation $generation, array $snapshot): array
     {
         $providerCost = $this->costs->providerCost($snapshot['usage'], $snapshot['rates']);
 
         return [
             'usage' => json_encode($snapshot['usage']),
             'provider_cost' => $providerCost->nanos,
-            'charged_amount' => $this->costs->charge($providerCost)->nanos,
+            'charged_amount' => $this->costs->charge($providerCost, $generation->markup_basis_points)->nanos,
             'image_url' => $snapshot['image_url'] ?? null,
             'image_url_expires_at' => $this->timestamp($snapshot['image_url_expires_at'] ?? null),
             'error_code' => null,

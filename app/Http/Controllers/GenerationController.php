@@ -12,6 +12,7 @@ use App\Services\Credits\CreditLedger;
 use App\Services\Credits\InsufficientCredits;
 use App\Services\Pixelforge\CostCalculator;
 use App\Services\Pixelforge\PixelforgeClient;
+use App\Services\Pricing\Markup;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,11 +40,11 @@ class GenerationController extends Controller
      * The generate form with its live estimate. Pricing is null when Pixelforge's
      * price list can't be loaded; the form then explains why.
      */
-    public function create(PixelforgeClient $client): Response
+    public function create(PixelforgeClient $client, Markup $markup): Response
     {
         return Inertia::render('generations/Create', [
             'pricing' => $client->pricingOrNull()?->toArray(),
-            'markupPercent' => (int) config('services.pixelforge.markup_percent'),
+            'markupBasisPoints' => $markup->currentBasisPoints(),
         ]);
     }
 
@@ -51,7 +52,7 @@ class GenerationController extends Controller
      * Record the generation with its server-side estimate, reserve its worst-case price
      * from the user's credits, and queue the submission.
      */
-    public function store(StoreGenerationRequest $request, PixelforgeClient $client, CostCalculator $costs, CreditLedger $credits): RedirectResponse
+    public function store(StoreGenerationRequest $request, PixelforgeClient $client, CostCalculator $costs, CreditLedger $credits, Markup $markup): RedirectResponse
     {
         $prompt = $request->validated('prompt');
         $size = GenerationSize::from($request->validated('size'));
@@ -62,10 +63,11 @@ class GenerationController extends Controller
             'pricing' => __('Pricing is temporarily unavailable, so we can\'t quote this generation. Please try again in a moment.'),
         ]);
 
-        $estimate = $costs->estimate($pricing, $prompt, $size, $quality, count($referenceImages));
+        $markupBasisPoints = $markup->currentBasisPoints();
+        $estimate = $costs->estimate($pricing, $prompt, $size, $quality, count($referenceImages), $markupBasisPoints);
 
         try {
-            $generation = DB::transaction(function () use ($request, $credits, $prompt, $size, $quality, $referenceImages, $estimate): Generation {
+            $generation = DB::transaction(function () use ($request, $credits, $prompt, $size, $quality, $referenceImages, $estimate, $markupBasisPoints): Generation {
                 $generation = $request->user()->generations()->create([
                     'uuid' => (string) Str::uuid7(),
                     'prompt' => $prompt,
@@ -74,6 +76,7 @@ class GenerationController extends Controller
                     'reference_images' => $referenceImages,
                     'estimated_charge' => $estimate->typicalCharge,
                     'maximum_charge' => $estimate->maximumCharge,
+                    'markup_basis_points' => $markupBasisPoints,
                 ]);
 
                 $credits->hold($generation);

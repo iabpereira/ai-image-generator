@@ -33,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property list<string> $reference_images
  * @property Money $estimated_charge
  * @property Money $maximum_charge
+ * @property int $markup_basis_points
  * @property Money|null $provider_cost
  * @property Money|null $charged_amount
  * @property array<string, string>|null $rates
@@ -52,7 +53,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'uuid', 'prompt', 'size', 'quality', 'reference_images',
-    'estimated_charge', 'maximum_charge', 'image_path', 'submission_attempts',
+    'estimated_charge', 'maximum_charge', 'markup_basis_points', 'image_path', 'submission_attempts',
 ])]
 class Generation extends Model
 {
@@ -84,6 +85,7 @@ class Generation extends Model
             'reference_images' => 'array',
             'estimated_charge' => MoneyCast::class,
             'maximum_charge' => MoneyCast::class,
+            'markup_basis_points' => 'integer',
             'provider_cost' => MoneyCast::class,
             'charged_amount' => MoneyCast::class,
             'rates' => 'array',

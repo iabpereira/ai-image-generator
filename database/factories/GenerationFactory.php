@@ -31,6 +31,7 @@ class GenerationFactory extends Factory
             'reference_images' => [],
             'estimated_charge' => Money::fromNanos(72_812_500),
             'maximum_charge' => Money::fromNanos(130_000_000),
+            'markup_basis_points' => 2500,
         ];
     }
 
